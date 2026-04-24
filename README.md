@@ -111,10 +111,10 @@ The test suite exists so that every Deckard release can be validated against the
 
 The scanner's knowledge base is built on, and every finding is classified against, the four frameworks above. Source material:
 
-- **RAISE Framework** — *[The Developer's Playbook for Large Language Model Security](https://www.oreilly.com/library/view/the-developers-playbook/9781098162191/)* by Steve Wilson (O'Reilly Media). See [`docs/RAISE.md`](docs/RAISE.md) for the RAISE reference inside this distribution.
 - **OWASP Top 10 for LLM Applications 2025** — [genai.owasp.org](https://genai.owasp.org/)
 - **OWASP Top 10 for Agentic Applications 2026** — [genai.owasp.org](https://genai.owasp.org/)
 - **OWASP Secure MCP Server Development Guide 2026** — [genai.owasp.org](https://genai.owasp.org/)
+- **RAISE Framework** — a six-category AI security maturity model. See [`docs/RAISE.md`](docs/RAISE.md) for the reference and the maturity scale used in scan reports.
 
 ---
 
