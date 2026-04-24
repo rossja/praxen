@@ -1,0 +1,821 @@
+<!--
+  Copyright © 2026 Exabeam, Inc. All Rights Reserved.
+  Confidential and Proprietary. Do not distribute. Use by permission only.
+
+  Canonical HTML template for Deckard scan reports.
+  Authoring and placeholder conventions are documented in skills/environment_scanner.md Step 11.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exabeam Deckard Agent Security Scanner — {{AGENT_NAME}} — {{SCAN_DATE}}</title>
+<style>
+  :root {
+    /* Exabeam brand — greens */
+    --green:        #009D00;
+    --green-lt:     #4CDB00;
+    --green-dark:   #106D00;
+
+    /* Exabeam brand — blues */
+    --blue:         #006BFF;
+    --blue-lt:      #27B2FF;
+    --blue-dark:    #003FCC;
+
+    /* Exabeam brand — accent */
+    --purple:       #8D00FF;
+
+    /* Neutrals */
+    --navy:         #0D1B2A;
+    --text:         #0D1B2A;
+    --text-muted:   #3A4A6B;
+    --bg:           #FFFFFF;
+    --surface:      #F5F7FA;
+    --surface-alt:  #F0F4FF;
+    --border:       #E1E4E8;
+    --border-alt:   #C8D4F0;
+
+    /* Severity (semantic, not brand) */
+    --sev-critical: #C0392B;
+    --sev-high:     #E67E00;
+    --sev-medium:   #D4A017;
+    --sev-low:      #6C757D;
+    --sev-info:     #6C757D;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Lausanne', Arial, 'Helvetica Neue', Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: var(--navy);
+    border-top: 4px solid var(--green-lt);
+    padding: 18px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header-left .brand { font-size: 22px; font-weight: 800; letter-spacing: 0.02em; }
+  .header-left .brand .exabeam { color: var(--green-lt); }
+  .header-left .brand .deckard { color: #FFFFFF; }
+  .header-left .subtitle { color: #8BAFC8; font-size: 12px; margin-top: 3px; }
+  .header-right { text-align: right; }
+  .header-right .agent-name { color: #FFFFFF; font-size: 15px; font-weight: 700; }
+  .header-right .scan-ts { color: #8BAFC8; font-size: 12px; margin-top: 3px; }
+  .status-badge {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 4px 14px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: #FFFFFF;
+  }
+  .status-critical { background: var(--sev-critical); }
+  .status-high     { background: var(--sev-high); }
+  .status-advisory { background: var(--sev-medium); }
+  .status-clean    { background: var(--green); }
+
+  /* ── Intro band ── */
+  .intro-band {
+    background: var(--surface-alt);
+    border-bottom: 2px solid var(--border-alt);
+    padding: 22px 32px 24px;
+  }
+  .intro-band h1 {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 14px;
+    line-height: 1.35;
+  }
+  .intro-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 24px;
+  }
+  .intro-block .label {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--blue-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .intro-block .body {
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .intro-block .body code {
+    background: #E6ECF5;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: var(--navy);
+  }
+
+  /* ── Main ── */
+  .content { padding: 28px 32px; max-width: 1100px; margin: 0 auto; }
+  .section { margin-bottom: 40px; }
+  .section-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--blue-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+  }
+  .section-desc {
+    color: #555;
+    font-size: 13px;
+    margin: 0 0 18px;
+    line-height: 1.6;
+  }
+  .section-desc a { color: var(--blue); text-decoration: none; }
+  .section-desc a:hover { text-decoration: underline; }
+
+  /* ── Scan Summary ── */
+  .scan-summary {
+    background: var(--surface-alt);
+    border-left: 4px solid var(--green-lt);
+    padding: 20px 26px;
+    margin-bottom: 28px;
+    border-radius: 0 8px 8px 0;
+  }
+  .scan-summary .label {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--blue-dark);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .scan-summary .body {
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .scan-summary .body p + p { margin-top: 10px; }
+
+  /* ── RAISE Scorecard ── */
+  .raise-hero {
+    background: var(--navy);
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+  .raise-hero .hero-score-block { flex-shrink: 0; min-width: 180px; }
+  .raise-hero .hero-score {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    line-height: 1;
+  }
+  .raise-hero .hero-score-num {
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .raise-hero .hero-score-max {
+    font-size: 22px;
+    color: #8BAFC8;
+    font-weight: 600;
+  }
+  .raise-hero .hero-label {
+    font-size: 11px;
+    color: #8BAFC8;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-top: 8px;
+    font-weight: 700;
+  }
+  .raise-hero .hero-rationale {
+    flex: 1;
+    min-width: 280px;
+    color: #C8D4F0;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  /* Hero score uses a single brand color — the number is data, not a verdict.
+     Severity/status is communicated by the header badge, not by coloring the maturity score. */
+  .raise-hero .hero-score-num { color: var(--blue-lt); }
+
+  .raise-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 900px) { .raise-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .raise-grid { grid-template-columns: 1fr; } }
+
+  .raise-card {
+    background: #FFFFFF;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--sev-low);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .raise-card .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .raise-card .card-title {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--navy);
+    line-height: 1.25;
+  }
+  .raise-card .card-score {
+    font-weight: 800;
+    line-height: 1;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .raise-card .card-score .score-num { font-size: 30px; }
+  .raise-card .card-score .score-max {
+    font-size: 13px;
+    color: var(--sev-low);
+    font-weight: 600;
+    margin-left: 3px;
+  }
+  .raise-card .progress-bar {
+    background: #E9ECEF;
+    border-radius: 3px;
+    height: 5px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  .raise-card .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+  }
+  .raise-card .card-meta {
+    color: var(--sev-low);
+    font-size: 11px;
+    margin-bottom: 10px;
+    letter-spacing: 0.02em;
+  }
+  .raise-card .card-body {
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  /* Maturity cards: neutral, consistent styling at every score tier.
+     Score level is communicated by the number and the progress-bar fill width —
+     not by traffic-light colors. The score-0-1/score-2/score-3/score-4-5 classes
+     remain for semantic/data purposes but all render identically. */
+  .raise-card,
+  .raise-card.score-0-1,
+  .raise-card.score-2,
+  .raise-card.score-3,
+  .raise-card.score-4-5 {
+    border-left-color: var(--blue-dark);
+  }
+  .raise-card .score-num,
+  .raise-card.score-0-1 .score-num,
+  .raise-card.score-2 .score-num,
+  .raise-card.score-3 .score-num,
+  .raise-card.score-4-5 .score-num {
+    color: var(--navy);
+  }
+  .raise-card .progress-fill,
+  .raise-card.score-0-1 .progress-fill,
+  .raise-card.score-2 .progress-fill,
+  .raise-card.score-3 .progress-fill,
+  .raise-card.score-4-5 .progress-fill {
+    background: var(--blue-dark);
+  }
+
+  /* ── Rubric table ── */
+  .rubric-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 16px 0 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .rubric-table th {
+    background: var(--navy);
+    color: #FFFFFF;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .rubric-table th.col-score { width: 80px; text-align: center; }
+  .rubric-table th.col-label { width: 150px; }
+  .rubric-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .rubric-table tr:last-child td { border-bottom: none; }
+  .rubric-table .rubric-score {
+    text-align: center;
+    font-weight: 800;
+    font-size: 16px;
+  }
+  .rubric-table .rubric-label { font-weight: 700; color: var(--navy); }
+  .rubric-table .rubric-meaning { color: var(--text-muted); font-size: 12.5px; line-height: 1.55; }
+  /* Rubric score cells: neutral blue gradient (lighter = lower score, darker = higher).
+     No red/amber/green — the scale describes maturity, not pass/fail. */
+  .rubric-row-0 .rubric-score { color: var(--navy); background: #F0F4FF; }
+  .rubric-row-1 .rubric-score { color: var(--navy); background: #E0E7FF; }
+  .rubric-row-2 .rubric-score { color: var(--navy); background: #C8D4F0; }
+  .rubric-row-3 .rubric-score { color: #FFFFFF;     background: #6C99CC; }
+  .rubric-row-4 .rubric-score { color: #FFFFFF;     background: var(--blue); }
+  .rubric-row-5 .rubric-score { color: #FFFFFF;     background: var(--blue-dark); }
+  .rubric-note {
+    color: var(--text-muted);
+    font-size: 12.5px;
+    line-height: 1.6;
+    margin: 12px 0 0;
+    padding: 10px 14px;
+    background: var(--surface-alt);
+    border-left: 3px solid var(--blue);
+    border-radius: 0 6px 6px 0;
+  }
+
+  .conf-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    background: #E0E7FF;
+    color: var(--blue-dark);
+    margin-left: 6px;
+  }
+
+  /* ── Remit Coverage ── */
+  .stat-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+  .stat-pill {
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 13px;
+    color: #fff;
+  }
+  .stat-verified { background: var(--green); }
+  .stat-gap      { background: var(--sev-critical); }
+  .stat-partial  { background: var(--sev-high); }
+  .stat-vague    { background: var(--sev-medium); color: #3A3000; }
+  .stat-enp      { background: var(--sev-low); }
+  .stat-total    { background: var(--navy); }
+
+  .remit-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .remit-table th {
+    background: var(--blue);
+    color: #FFFFFF;
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 700;
+  }
+  .remit-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .remit-table tr:hover td { background: #F8F9FE; }
+  .rule-quote { font-style: italic; color: #334; }
+
+  .status-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+  .pill-verified { background: #D1FAE5; color: #065F46; }
+  .pill-gap      { background: #FEE2E2; color: #991B1B; }
+  .pill-partial  { background: #FFEDD5; color: #92400E; }
+  .pill-vague    { background: #FEF9C3; color: #713F12; }
+  .pill-enp      { background: #E5E7EB; color: #374151; }
+
+  /* ── Finding Cards ── */
+  .finding-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .finding-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .sev-badge {
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.07em;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .sev-critical { background: var(--sev-critical); }
+  .sev-high     { background: var(--sev-high); }
+  .sev-medium   { background: var(--sev-medium); }
+  .sev-low      { background: var(--sev-low); }
+  .sev-info     { background: var(--sev-info); }
+
+  .finding-id { font-family: 'Courier New', Courier, monospace; font-weight: 700; color: var(--sev-low); font-size: 13px; }
+  .finding-summary { font-weight: 600; color: var(--navy); font-size: 14px; flex: 1; }
+
+  .finding-body { padding: 16px 18px; }
+  .tag-row { margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .tag-raise   { background: var(--purple); color: #FFFFFF; }
+  .tag-owasp   { background: var(--blue); color: #FFFFFF; }
+  .tag-agentic { background: var(--blue-dark); color: #FFFFFF; }
+
+  .policy-ref {
+    background: var(--surface-alt);
+    border-left: 4px solid var(--blue);
+    padding: 10px 14px;
+    margin: 12px 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 12px;
+    color: #334;
+  }
+  .policy-ref strong { color: var(--blue-dark); font-weight: 700; }
+
+  .evidence-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    color: var(--navy);
+    margin: 12px 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .rec-label { font-weight: 700; color: var(--blue-dark); margin-top: 12px; margin-bottom: 4px; font-size: 13px; }
+  .rec-text  { color: #334; font-size: 13px; }
+  .rec-text code {
+    background: var(--surface);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+
+  /* ── What's Working ── */
+  .positive-card {
+    background: #E8F5E9;
+    border-left: 3px solid var(--green);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin-bottom: 14px;
+  }
+  .positive-card h4 { color: var(--green-dark); font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .positive-card p  { color: #1B4332; font-size: 13px; }
+  .positive-card .pos-ref { color: #3A6B4A; font-size: 11px; font-family: 'Courier New', Courier, monospace; margin-top: 4px; }
+
+  /* ── Log files table ── */
+  .log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .log-table th {
+    background: var(--blue);
+    color: #FFFFFF;
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 700;
+  }
+  .log-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .log-status-active { color: var(--green); font-weight: 700; }
+  .log-status-new    { color: var(--blue); font-weight: 700; }
+  .none-found { color: var(--sev-low); font-style: italic; font-size: 13px; padding: 12px 0; }
+
+  /* ── Footer ── */
+  .footer {
+    background: var(--navy);
+    padding: 18px 32px;
+    margin-top: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .footer .brand-foot { color: var(--green-lt); font-weight: 800; font-size: 14px; letter-spacing: 0.02em; }
+  .footer .meta { color: #6C99CC; font-size: 11px; text-align: right; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<!-- ── Header bar ── -->
+<div class="header">
+  <div class="header-left">
+    <div class="brand"><span class="exabeam">EXABEAM</span><span class="deckard"> DECKARD</span></div>
+    <div class="subtitle">Agent Security Scanner</div>
+  </div>
+  <div class="header-right">
+    <div class="agent-name">Agent: {{AGENT_NAME}}</div>
+    <div class="scan-ts">Scan: {{SCAN_TIMESTAMP}}</div>
+    <!-- PICK:overall_status — use ONE of: status-critical | status-high | status-advisory | status-clean -->
+    <div><span class="status-badge status-{{OVERALL_STATUS_CLASS}}">{{OVERALL_STATUS_LABEL}}</span></div>
+  </div>
+</div>
+
+<!-- ── Intro band ── -->
+<div class="intro-band">
+  <h1>{{AGENT_NAME}} &middot; Scan completed {{SCAN_DATE}}</h1>
+  <div class="intro-grid">
+    <div class="intro-block">
+      <div class="label">Agent Remit (as declared)</div>
+      <div class="body">{{AGENT_REMIT_SUMMARY}}</div>
+    </div>
+    <div class="intro-block">
+      <div class="label">Agent Structure (as observed)</div>
+      <div class="body">{{AGENT_STRUCTURE_SUMMARY}}</div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- ── Scan Summary ── -->
+  <!-- Scanner synthesis: the dominant finding pattern across the scan.
+       Two to four sentences. Pattern-focused, not a scorecard restatement.
+       See environment_scanner.md Step 9 for authoring guidance. -->
+  <div class="scan-summary">
+    <div class="label">Scan Summary</div>
+    <div class="body">{{SCAN_SUMMARY_NARRATIVE}}</div>
+  </div>
+
+  <!-- ── Remit Coverage ── -->
+  <div class="section">
+    <div class="section-title">Remit Coverage</div>
+    <p class="section-desc">Systematic audit of every actionable rule in {{AGENT_NAME}}'s Worker Remit — the policy document that defines what this agent is authorized to do. For each rule, Deckard searched the agent's code and configuration to determine whether the running implementation actually enforces the stated policy. <strong>Gap</strong> means the rule exists in policy but has no enforcement in code. <strong>Partial</strong> means enforcement exists but is incomplete or can be bypassed. Rules marked <strong>Vague Policy</strong> are too imprecise to audit and should be rewritten with specific, testable constraints.</p>
+    <div class="stat-bar">
+      <span class="stat-pill stat-verified">Verified: {{N_VERIFIED}}</span>
+      <span class="stat-pill stat-gap">Gap: {{N_GAP}}</span>
+      <span class="stat-pill stat-partial">Partial: {{N_PARTIAL}}</span>
+      <span class="stat-pill stat-vague">Vague Policy: {{N_VAGUE}}</span>
+      <span class="stat-pill stat-enp">Enforcement Not Possible: {{N_ENP}}</span>
+      <span class="stat-pill stat-total">Total Rules: {{N_TOTAL_RULES}}</span>
+    </div>
+    <table class="remit-table">
+      <thead>
+        <tr>
+          <th>Rule ID</th>
+          <th>Section</th>
+          <th>Rule (quoted)</th>
+          <th>Status</th>
+          <th>Finding</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- REPEAT:remit_row — one row per remit rule (R-01, R-02, ...).
+             Use pill class: pill-verified | pill-gap | pill-partial | pill-vague | pill-enp
+             If no linked finding, leave finding cell empty. -->
+        <tr>
+          <td><strong>{{RULE_ID}}</strong></td>
+          <td>{{REMIT_SECTION}}</td>
+          <td class="rule-quote">"{{RULE_TEXT}}"</td>
+          <td><span class="status-pill {{STATUS_PILL_CLASS}}">{{STATUS_LABEL}}</span></td>
+          <td><a href="#{{FINDING_ANCHOR}}">{{FINDING_ID}}</a></td>
+        </tr>
+        <!-- END:remit_row -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Findings Register ── -->
+  <div class="section">
+    <div class="section-title">Findings Register</div>
+    <p class="section-desc">Detailed security findings from this scan, each citing specific evidence from the agent's workspace. Every finding identifies the policy rule it violates (with exact quoted text from the Worker Remit), an evidence block with file paths and line numbers, and a specific recommended action. Findings are cross-referenced to the RAISE framework, the OWASP Top 10 for LLM Applications 2025, and the OWASP Top 10 for Agentic AI Applications 2026.</p>
+
+    <!-- REPEAT:finding — one card per finding.
+         Order: Critical first, then High, Medium, Low, Informational.
+         Severity class: sev-critical | sev-high | sev-medium | sev-low | sev-info
+         Tag classes: tag-raise | tag-owasp | tag-agentic
+         Finding anchor id must match the remit-row linked anchor. -->
+    <div class="finding-card" id="{{FINDING_ANCHOR}}">
+      <div class="finding-header">
+        <span class="sev-badge {{SEVERITY_CLASS}}">{{SEVERITY_LABEL}}</span>
+        <span class="finding-id">{{FINDING_ID}}</span>
+        <span class="finding-summary">{{FINDING_SUMMARY}}</span>
+      </div>
+      <div class="finding-body">
+        <div class="tag-row">
+          <!-- REPEAT:finding_tag -->
+          <span class="tag {{TAG_CLASS}}">{{TAG_LABEL}}</span>
+          <!-- END:finding_tag -->
+        </div>
+        <div class="policy-ref">
+          <strong>Policy Rule — {{RULE_IDS}} (Worker Remit):</strong><br>
+          <em>"{{QUOTED_RULE_TEXT}}"</em>
+        </div>
+        <div class="evidence-block">{{EVIDENCE}}</div>
+        <div class="rec-label">Recommended Action</div>
+        <div class="rec-text">{{RECOMMENDED_ACTION}}</div>
+      </div>
+    </div>
+    <!-- END:finding -->
+
+  </div>
+
+  <!-- ── What's Working Well ── -->
+  <div class="section">
+    <div class="section-title">What's Working Well</div>
+    <p class="section-desc">Controls and behaviors that are correctly implemented and verified during this scan. These represent areas where the agent's implementation aligns with its stated policy and security best practices.</p>
+
+    <!-- REPEAT:positive — one card per verified positive.
+         If no positives found, replace the entire REPEAT block with:
+         <div class="none-found">No confirmed positive controls were verified during this scan.</div>
+    -->
+    <div class="positive-card">
+      <h4>{{POSITIVE_TITLE}}</h4>
+      <p>{{POSITIVE_DESCRIPTION}}</p>
+      <div class="pos-ref">{{POSITIVE_EVIDENCE_PATH}}</div>
+    </div>
+    <!-- END:positive -->
+
+  </div>
+
+  <!-- ── Discovered Log Files ── -->
+  <div class="section">
+    <div class="section-title">Discovered Log Files</div>
+    <p class="section-desc">Log files found in the agent's workspace during this scan. Reviewing these files provides runtime evidence to complement the static analysis above.</p>
+
+    <!-- PICK:logs_present — use ONE of the two blocks below -->
+
+    <!-- Variant A: logs found — -->
+    <table class="log-table">
+      <thead>
+        <tr>
+          <th>Path</th>
+          <th>Source</th>
+          <th>Content Type</th>
+          <th>Purpose</th>
+          <th>Last Modified</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- REPEAT:log_row — use log-status class: log-status-active | log-status-new -->
+        <tr>
+          <td>{{LOG_PATH}}</td>
+          <td>{{LOG_SOURCE}}</td>
+          <td>{{LOG_CONTENT_TYPE}}</td>
+          <td>{{LOG_PURPOSE}}</td>
+          <td>{{LOG_MTIME}}</td>
+          <td><span class="{{LOG_STATUS_CLASS}}">{{LOG_STATUS_LABEL}}</span></td>
+        </tr>
+        <!-- END:log_row -->
+      </tbody>
+    </table>
+
+    <!-- Variant B: no logs — -->
+    <div class="none-found">{{NO_LOGS_NOTE}}</div>
+
+    <!-- END:logs_present -->
+  </div>
+
+  <!-- ── RAISE Maturity Posture (wrap-up) ── -->
+  <div class="section">
+    <div class="section-title">RAISE Maturity Posture</div>
+    <p class="section-desc">Overall maturity assessment across the six categories of the RAISE framework — the responsible AI security engineering methodology from <a href="https://www.oreilly.com/library/view/the-developers-playbook/9781098162191/"><em>The Developer's Playbook for Large Language Model Security</em></a> by Steve Wilson (O'Reilly Media). <strong>This is a maturity model, not a school grade:</strong> a score of 3 / 5 means <em>Established</em>, not 60 percent. Most production AI agents today score between <em>Ad hoc</em> (1) and <em>Established</em> (3). See <a href="docs/RAISE.md">the RAISE reference</a> or <code>docs/RAISE.md</code> in the Deckard distribution for the full framework.</p>
+
+    <!-- Weighted overall hero band.
+         Use status class matching the overall status badge:
+         status-critical | status-high | status-advisory | status-clean -->
+    <div class="raise-hero status-{{OVERALL_STATUS_CLASS}}">
+      <div class="hero-score-block">
+        <div class="hero-score">
+          <span class="hero-score-num">{{WEIGHTED_SCORE}}</span>
+          <span class="hero-score-max">/ 5.0</span>
+        </div>
+        <div class="hero-label">Weighted Maturity Score &middot; {{MATURITY_LABEL}}</div>
+      </div>
+      <div class="hero-rationale">{{WEIGHTED_RATIONALE}}</div>
+    </div>
+
+    <div class="raise-grid">
+      <!-- REPEAT:raise_card — one card per category, in this fixed order:
+           Limit Your Domain, Balance Your Knowledge Base, Implement Zero Trust,
+           Manage Your Supply Chain, Build an AI Red Team, Monitor Continuously.
+           Use score-class: score-0-1 | score-2 | score-3 | score-4-5
+           SCORE_PCT = SCORE * 20 (e.g., score 3 → 60) -->
+      <div class="raise-card {{SCORE_CLASS}}">
+        <div class="card-top">
+          <div class="card-title">{{CATEGORY_NAME}}</div>
+          <div class="card-score"><span class="score-num">{{SCORE}}</span><span class="score-max">/ 5</span></div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width: {{SCORE_PCT}}%;"></div></div>
+        <div class="card-meta">Confidence: {{CONFIDENCE}} &nbsp;|&nbsp; Weight: {{WEIGHT_PCT}}% &nbsp;|&nbsp; Weighted: {{WEIGHTED_CONTRIBUTION}}</div>
+        <div class="card-body">{{RATIONALE}}</div>
+      </div>
+      <!-- END:raise_card -->
+    </div>
+
+    <h4 style="margin: 32px 0 4px; font-size: 13px; font-weight: 800; color: var(--blue-dark); text-transform: uppercase; letter-spacing: 0.08em;">Maturity Scoring Rubric</h4>
+    <p style="color: #555; font-size: 13px; margin: 0 0 6px; line-height: 1.6;">Every score above is based on this scale. A score is a snapshot of observable posture — not a verdict on the people or team behind the system.</p>
+    <table class="rubric-table">
+      <thead>
+        <tr>
+          <th class="col-score">Score</th>
+          <th class="col-label">Label</th>
+          <th>Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="rubric-row-5">
+          <td class="rubric-score">5</td>
+          <td class="rubric-label">Exemplary</td>
+          <td class="rubric-meaning">Best-in-class; automated, continuously tested, reference quality. Rarely achieved in shipping systems.</td>
+        </tr>
+        <tr class="rubric-row-4">
+          <td class="rubric-score">4</td>
+          <td class="rubric-label">Strong</td>
+          <td class="rubric-meaning">Comprehensive controls, active management, minor gaps. Production-ready.</td>
+        </tr>
+        <tr class="rubric-row-3">
+          <td class="rubric-score">3</td>
+          <td class="rubric-label">Established</td>
+          <td class="rubric-meaning">Documented controls consistently applied; known gaps accepted. A respectable baseline.</td>
+        </tr>
+        <tr class="rubric-row-2">
+          <td class="rubric-score">2</td>
+          <td class="rubric-label">Partial</td>
+          <td class="rubric-meaning">Some controls exist but coverage is incomplete; key gaps remain.</td>
+        </tr>
+        <tr class="rubric-row-1">
+          <td class="rubric-score">1</td>
+          <td class="rubric-label">Ad hoc</td>
+          <td class="rubric-meaning">Informal or inconsistent measures; relies on individual judgment.</td>
+        </tr>
+        <tr class="rubric-row-0">
+          <td class="rubric-score">0</td>
+          <td class="rubric-label">Absent</td>
+          <td class="rubric-meaning">No evidence this category is addressed at all.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="rubric-note">
+      <strong>Weighting:</strong> Zero Trust counts at 25 percent (double); the other five categories each count at 15 percent. The weighted overall sums <em>score × weight</em> across all six categories to produce a 0.0–5.0 scalar.
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Footer ── -->
+<div class="footer">
+  <div class="brand-foot">EXABEAM DECKARD</div>
+  <div class="meta">
+    Agent: {{AGENT_NAME}} &nbsp;|&nbsp;
+    Scan: {{SCAN_TIMESTAMP}} &nbsp;|&nbsp;
+    Artifacts: {{ARTIFACT_COUNT}} &nbsp;|&nbsp;
+    Findings: {{N_CRITICAL}} Critical &nbsp; {{N_HIGH}} High &nbsp; {{N_MEDIUM}} Medium &nbsp; {{N_LOW}} Low &nbsp; {{N_INFO}} Informational<br>
+    Deckard v{{DECKARD_VERSION}} &nbsp;|&nbsp;
+    Built on RAISE Framework &mdash; <em>The Developer's Playbook for Large Language Model Security</em> &mdash; O'Reilly Media &nbsp;|&nbsp;
+    OWASP Top 10 for LLM Applications 2025 &nbsp;|&nbsp; OWASP Top 10 for Agentic Applications 2026
+  </div>
+</div>
+
+</body>
+</html>
