@@ -4,7 +4,7 @@
 -->
 
 # Exabeam Deckard Agent Security Scanner
-**Version 0.6.6**
+**Version 0.7.0**
 
 **A security scanner for AI agents.** The Exabeam Deckard Agent Security Scanner (**Deckard Scanner**) inspects the environment an AI agent runs in — its code, skill files, tool definitions, configuration, and dependencies — and evaluates it against a defined policy. Findings land in a local HTML report. Nothing phones home.
 
@@ -46,23 +46,40 @@ All findings are evaluated against a single source of truth: the **Worker Remit*
 
 ## Running a Scan
 
-**There is no install step.** Unzip the release and open your coding agent in the unzipped directory — that's the whole setup.
+Deckard ships as a Claude Code plugin inside a plugin marketplace. You can install it through the marketplace mechanism or run it directly from an unzipped release — both paths work.
 
-**1. Drop the Deckard directory somewhere your coding agent can see it.**
+### Option A — Install via Claude Code plugin marketplace
 
-**2. Write a Worker Remit for the agent you're scanning.**
+From a Claude Code session:
+
+```
+/plugin marketplace add Exabeam/deckard
+/plugin install deckard@exabeam
+```
+
+That's the install step. The skill is now available as `environment-scanner`.
+
+### Option B — Use directly from an unzipped release
+
+Unzip the release somewhere your coding agent can see it. No install step required.
+
+### Write a Worker Remit for the agent you're scanning
 
 Use [`WORKER_REMIT_template.md`](WORKER_REMIT_template.md) as the starting point. Describe what the target agent is authorized to do — its tools, channels, counterparties, and behavioral norms. Save the file as `WORKER_REMIT.md` (or `WORKER_REMIT_<agent>.md`) anywhere your coding agent can read it — typically alongside the agent workspace you're scanning, or in the directory you run the scan from. If you skip this step, your coding agent can help you draft one before the scan.
 
-**3. Open your coding agent and read the scanner skill:**
+### Run the scan
+
+Tell your coding agent:
 
 ```
-Please read and run skills/environment_scanner.md to scan [agent workspace path].
+Please run the environment-scanner skill to scan [agent workspace path].
 ```
+
+(Or if you're using the unzipped release directly, point the agent at `skills/environment-scanner/SKILL.md`.)
 
 Your coding agent reads the workspace, evaluates it against the RAISE framework and Worker Remit, and writes the results to `./reports/`.
 
-**4. Open the report.**
+### Open the report
 
 ```
 ./reports/<agent-name>-scan-<timestamp>.html
@@ -112,10 +129,14 @@ deckard/
   README.md                   ← You are here
   DECKARD_SPEC.md             ← Full specification
   WORKER_REMIT_template.md    ← Starting point for writing your own remit
-  knowledge/                  ← RAISE + OWASP knowledge base
+  .claude-plugin/
+    plugin.json               ← Claude Code plugin manifest
+    marketplace.json          ← Marketplace catalog for this repo
   skills/
-    environment_scanner.md    ← The scanner skill prompt
-    report_template.html      ← Canonical HTML report template
+    environment-scanner/
+      SKILL.md                ← The scanner skill prompt
+      report_template.html    ← Canonical HTML report template
+      knowledge/              ← RAISE + OWASP knowledge base loaded by the skill
   docs/
     RAISE.md                  ← RAISE framework reference + maturity scale
   examples/                   ← Example scans against real vulnerable agents

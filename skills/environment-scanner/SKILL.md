@@ -1,3 +1,9 @@
+---
+name: environment-scanner
+description: Scan an AI agent's workspace for security issues. Reads the agent's code, skill files, tool definitions, configuration, and dependencies; evaluates them against a Worker Remit (policy document) and the RAISE framework; produces a self-contained HTML report plus JSON findings under ./reports/. Use when the operator asks to run a Deckard scan, review an agent's security posture, or evaluate policy-implementation divergence.
+allowed-tools: Read Grep Glob Bash Write
+---
+
 <!--
   Copyright © 2026 Exabeam, Inc. All Rights Reserved.
   Confidential and Proprietary. Do not distribute. Use by permission only.
@@ -601,7 +607,7 @@ REPORT_FILE=./reports/${AGENT_SLUG}-scan-${TIMESTAMP}.html
 
 **Use the canonical template. Do not redesign the report.**
 
-Read `skills/report_template.html` from the same directory as this skill file. Copy it verbatim to `$REPORT_FILE`, then substitute the data placeholders with scan results.
+Read `report_template.html` from the same directory as this skill file. Copy it verbatim to `$REPORT_FILE`, then substitute the data placeholders with scan results.
 
 ### Template structure
 

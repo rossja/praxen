@@ -5,7 +5,7 @@
 
 # Exabeam Deckard Agent Security Scanner — Specification
 
-**Version:** 0.6.6
+**Version:** 0.7.0
 **Status:** Release
 
 ---

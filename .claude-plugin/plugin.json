@@ -1,0 +1,21 @@
+{
+  "name": "deckard",
+  "version": "0.7.0",
+  "description": "Exabeam Deckard Agent Security Scanner — a security scanner for AI agents. Reads an agent's workspace, evaluates it against a Worker Remit and the RAISE framework, and produces an HTML report plus JSON findings.",
+  "author": {
+    "name": "Exabeam",
+    "url": "https://www.exabeam.com/"
+  },
+  "homepage": "https://github.com/Exabeam/deckard",
+  "repository": "https://github.com/Exabeam/deckard",
+  "license": "SEE LICENSE IN LICENSE",
+  "keywords": [
+    "ai-security",
+    "agent-security",
+    "raise-framework",
+    "owasp",
+    "security-scanner",
+    "policy-implementation-divergence"
+  ],
+  "skills": "./skills/"
+}

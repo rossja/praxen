@@ -35,11 +35,11 @@ mkdir -p "$STAGE_DIR"
 # Files and directories that ship in the distribution.
 # Add here if a new distributable artifact is introduced.
 INCLUDE=(
+  ".claude-plugin"
   "README.md"
   "DECKARD_SPEC.md"
   "LICENSE"
   "WORKER_REMIT_template.md"
-  "knowledge"
   "skills"
   "docs"
   "examples"

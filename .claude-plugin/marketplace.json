@@ -1,0 +1,22 @@
+{
+  "name": "exabeam",
+  "owner": {
+    "name": "Exabeam",
+    "url": "https://www.exabeam.com/"
+  },
+  "metadata": {
+    "description": "Exabeam's Claude Code plugin marketplace. Currently publishes the Deckard Agent Security Scanner.",
+    "version": "0.7.0"
+  },
+  "plugins": [
+    {
+      "name": "deckard",
+      "source": ".",
+      "description": "Security scanner for AI agents. Evaluates an agent's workspace against a Worker Remit and the RAISE framework; produces HTML + JSON findings.",
+      "version": "0.7.0",
+      "license": "SEE LICENSE IN LICENSE",
+      "keywords": ["ai-security", "agent-security", "raise-framework", "owasp"],
+      "category": "security"
+    }
+  ]
+}
