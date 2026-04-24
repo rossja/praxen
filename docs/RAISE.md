@@ -121,12 +121,3 @@ A scan result is a snapshot. Use it to:
 - **Compare defaults vs. hardened configurations.** Many agents ship with permissive defaults. Re-scanning after applying recommended operator configuration often reveals that controls exist but weren't enforced.
 
 A score is one signal. The Findings Register, Remit Coverage table, and Scan Summary in the full report contain the specifics you need to act on.
-
----
-
-## Further Reading
-
-- **The Developer's Playbook for Large Language Model Security** — the full RAISE framework, including threat models, case studies, and the category-level guidance the scanner operationalizes. [Book page](https://www.oreilly.com/library/view/the-developers-playbook/9781098162191/).
-- **OWASP Top 10 for LLM Applications 2025** — LLM-specific vulnerabilities the scanner cross-references.
-- **OWASP Top 10 for Agentic AI Applications 2026** — agentic-specific attack patterns the scanner uses to classify findings.
-- **OWASP Secure MCP Server Development Guide 2026** — applied when the scanner finds MCP server configuration in the workspace.
