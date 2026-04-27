@@ -6,7 +6,9 @@
 # Exabeam Deckard Agent Security Scanner
 **Version 0.7.0**
 
-**A security scanner for AI agents.** The Exabeam Deckard Agent Security Scanner (**Deckard Scanner**) inspects the environment an AI agent runs in — its code, skill files, tool definitions, configuration, and dependencies — and evaluates it against a defined policy. Findings land in a local HTML report. Nothing phones home.
+**A security scanner for AI agents.** The Exabeam Deckard Agent Security Scanner (**Deckard Scanner**) compares an agent's declared policy (its Worker Remit) against whatever evidence is available about that agent — source code in a repository, live memory and log files from a running deployment, or chat transcripts and behavioral records — and reports where observed behavior diverges from declared intent. Findings land in a local HTML report. Nothing phones home.
+
+Deckard is **not just a source-code scanner.** Any artifact that reveals what the agent actually does, has done, or is configured to do is valid input.
 
 ---
 
@@ -34,6 +36,20 @@ On top of the framework coverage above, every scan runs these named detections:
 - **Compound signal reasoning** — individual findings chained together when they combine into a high-severity attack path
 
 All findings are evaluated against a single source of truth: the **Worker Remit** — a markdown document that defines what the agent is authorized to be and do.
+
+---
+
+## What Deckard Scans
+
+The scanner accepts any artifact that reveals what the agent does, has done, or is configured to do. Three common input shapes — used individually or in combination:
+
+| Shape | Example | What Deckard does with it |
+|---|---|---|
+| **Source repository** | A GitHub repo, agent project directory, plugin source tree | Reads code, configs, skill files, dependencies, prompts; checks code against the remit; runs supply-chain and credential-exposure detectors. |
+| **Running deployment** | Live memory files (`MEMORY.md`, `SOUL.md`, daily logs), action logs, postmortems, config files from a deployed instance | Treats live state as the agent's autobiography; scans for behavioral drift, half-wired controls, planned-but-not-deployed gaps, and session-loaded files audited as system prompts. |
+| **Behavioral artifacts** | Chat transcripts, email histories, conversation logs, decision records | Treats observed behavior as evidence; checks for control-logic disclosure, identity-claim acceptance without verification, scope drift, and missing escalations. |
+
+The methodology adapts. A repo-only scan covers code-level findings — Manage Your Supply Chain, credential exposure, configuration gaps — but can't observe behavior. A behavior-only scan covers Implement Zero Trust violations the agent demonstrably committed but can't assess code quality the transcript doesn't reveal. A scan with both inputs gets the most complete picture, and the report's confidence levels are calibrated accordingly. See [`examples/`](examples/) for repo-shape scans and the test plan in `tests/README.md` (in the source repo) for the breadth of targets we've validated.
 
 ---
 
@@ -72,12 +88,12 @@ Use [`WORKER_REMIT_template.md`](WORKER_REMIT_template.md) as the starting point
 Tell your coding agent:
 
 ```
-Please run the environment-scanner skill to scan [agent workspace path].
+Please run the environment-scanner skill to scan [path to the agent's repo, deployment workspace, or behavioral artifacts].
 ```
 
 (Or if you're using the unzipped release directly, point the agent at `skills/environment-scanner/SKILL.md`.)
 
-Your coding agent reads the workspace, evaluates it against the RAISE framework and Worker Remit, and writes the results to `./reports/`.
+Your coding agent reads whatever you provide — source code, live agent files, or transcripts — evaluates it against the RAISE framework and Worker Remit, and writes the results to `./reports/`. The methodology adapts to what's available; categories the input doesn't cover are scored at lower confidence and explicitly noted in the report.
 
 ### Open the report
 

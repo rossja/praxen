@@ -1,6 +1,6 @@
 ---
 name: environment-scanner
-description: Scan an AI agent's workspace for security issues. Reads the agent's code, skill files, tool definitions, configuration, and dependencies; evaluates them against a Worker Remit (policy document) and the RAISE framework; produces a self-contained HTML report plus JSON findings under ./reports/. Use when the operator asks to run a Deckard scan, review an agent's security posture, or evaluate policy-implementation divergence.
+description: Run a Deckard scan against an AI agent. Compares the agent's declared policy (Worker Remit) against whatever evidence the operator supplies — source code in a repository, live state from a running deployment (memory files, action logs, configs), or behavioral artifacts (chat transcripts, email histories). Evaluates against the RAISE framework + OWASP LLM/Agentic/MCP guidance; produces a self-contained HTML report plus JSON findings under ./reports/. The methodology adapts to the input shape; categories not covered by the input are scored at lower confidence and explicitly noted. Use when the operator asks to run a Deckard scan, review an agent's security posture, evaluate policy-implementation divergence, or audit observed agent behavior against declared intent.
 allowed-tools: Read Grep Glob Bash Write
 ---
 

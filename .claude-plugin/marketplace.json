@@ -12,7 +12,7 @@
     {
       "name": "deckard",
       "source": ".",
-      "description": "Security scanner for AI agents. Evaluates an agent's workspace against a Worker Remit and the RAISE framework; produces HTML + JSON findings.",
+      "description": "Policy compliance scanner for AI agents. Compares declared policy (Worker Remit) against the available evidence — source code, live deployment state, or behavioral records — and reports where observed behavior diverges from declared intent. Produces HTML + JSON findings.",
       "version": "0.7.0",
       "license": "SEE LICENSE IN LICENSE",
       "keywords": ["ai-security", "agent-security", "raise-framework", "owasp"],

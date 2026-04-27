@@ -12,11 +12,17 @@
 
 ## 1. Purpose
 
-The Exabeam Deckard Agent Security Scanner (**Deckard Scanner**) is a static analysis tool for AI agents. It inspects the environment an agent runs in and answers a single question:
+The Exabeam Deckard Agent Security Scanner (**Deckard Scanner**) is a policy compliance scanner for AI agents. It compares an agent's declared policy (its Worker Remit) against whatever evidence is available about that agent and answers a single question:
 
-**Is the environment the agent runs in secure and aligned with its authorized policy?** (environmental integrity)
+**Is what the agent actually does, has done, or is configured to do aligned with its authorized policy?** (policy compliance / behavioral integrity)
 
-Most agent security failures trace to environmental causes — a misconfigured tool, an unreviewed skill file, a policy that says one thing while the code does another, a dependency that changed quietly, a credential left in a file. The Deckard Scanner reads the agent's workspace, compares it to a declared policy, and writes findings to a local report. Nothing phones home.
+The scanner is **not limited to source code.** Three input shapes are first-class:
+
+- **Source repository** — code, configs, skill files, prompts, dependencies. Reveals what the agent is *configured* to do.
+- **Running deployment** — live memory files, action logs, configuration files, postmortems pulled from a deployed instance. Reveals what the agent *has done* and the current operational state.
+- **Behavioral artifacts** — chat transcripts, email histories, conversation logs, decision records. Reveals what the agent *actually does* in practice — including subtle policy drift that no static analysis can see.
+
+Most agent security failures trace to one of three causes: a misconfigured tool or unreviewed skill file (source); a policy that says one thing while live behavior does another (deployment); or a control that exists in policy but never fires when it should (behavior). The scanner reads whatever evidence is available, compares it to the Worker Remit, and writes findings to a local report. The methodology adapts: categories the input doesn't cover are scored at lower confidence and explicitly noted. Nothing phones home.
 
 The name reflects the mission. Deckard is not part of the agent. It is the observer.
 
@@ -133,19 +139,45 @@ The HTML is a self-contained, static page with inline CSS — it renders correct
 
 ### Artifact scope
 
-The scanner reads the agent's actual workspace — everything the agent runs from. This is not a description of the system; it is the system.
+The scanner reads whatever evidence the operator can supply. This is not a description of the agent; it is the agent — observed in code, in deployment state, or in behavior.
+
+**Source-shape artifacts** (a repository or project directory):
 
 | Source | What it provides |
 |--------|-----------------|
-| Agent skill files and code | Logic the agent executes — the ground truth of what it actually does |
+| Agent skill files and code | Logic the agent executes — the ground truth of what it is configured to do |
 | Tool and API definitions | Capabilities the agent can invoke and their parameters |
 | Policy and remit documents | What the agent is supposed to do — compared against what the code does |
 | Plugin manifests | Third-party components loaded at runtime |
 | Configuration files | Auth, endpoints, model selection, data access, approval policies |
 | Credential-adjacent files | Presence of plaintext secrets in unexpected locations |
 | Dependency and lock files | Library versions and provenance |
-| Action logs and postmortem records | Historical evidence of prior incidents |
-| Worker Remit | The authoritative comparison baseline |
+
+**Deployment-shape artifacts** (live state pulled from a running agent):
+
+| Source | What it provides |
+|--------|-----------------|
+| Memory files (`MEMORY.md`, `SOUL.md`, daily memory logs) | The agent's evolving self-state; secondary system prompts loaded at startup |
+| Session-loaded files (`AGENTS.md`, `USER.md`, `IDENTITY.md`, etc.) | The runtime context surface — everything entering LLM context before the first user turn |
+| Action logs and event streams | Historical record of what the agent has actually done |
+| Postmortem and incident records | Documented past failures and the controls (or absence thereof) that allowed them |
+| Live configuration files | Operationally-effective settings (which may differ from defaults shipped in the repo) |
+
+**Behavioral-shape artifacts** (observed agent outputs):
+
+| Source | What it provides |
+|--------|-----------------|
+| Chat transcripts and conversation logs | Direct evidence of how the agent responds to requests — including subtle policy drift |
+| Email histories and message archives | Outbound-action record; visibility into what the agent has sent and to whom |
+| Decision and correction records | Reasoned-out judgment calls and lessons learned |
+
+**The remit, always:**
+
+| Source | What it provides |
+|--------|-----------------|
+| Worker Remit | The authoritative comparison baseline — declared policy against which all other evidence is evaluated |
+
+The scanner adapts to whatever combination of inputs is available. A repo-only scan covers Manage Your Supply Chain comprehensively but cannot directly observe behavior. A behavior-only scan covers Implement Zero Trust violations the agent demonstrably committed but cannot assess code quality. A scan with multiple input shapes gets the most complete picture and the report's confidence levels are calibrated accordingly.
 
 ### What it detects
 
