@@ -3,37 +3,38 @@
   Confidential and Proprietary. Do not distribute. Use by permission only.
 -->
 
-# Exabeam Deckard Agent Security Scanner — Specification
+# Praxa — Specification
 
-**Version:** 0.7.0
-**Status:** Release
+**Version:** 0.1.0
+**Status:** First internal release
+**Tagline:** *Make sure your agent does its job — and only its job.*
 
 ---
 
 ## 1. Purpose
 
-The Exabeam Deckard Agent Security Scanner (**Deckard Scanner**) is a policy compliance scanner for AI agents. It compares an agent's declared policy (its Worker Remit) against whatever evidence is available about that agent and answers a single question:
+**Praxa** is an **agent behavior verifier**. It compares an AI agent's declared policy (its Worker Remit) against whatever evidence is available about that agent and answers a single question:
 
-**Is what the agent actually does, has done, or is configured to do aligned with its authorized policy?** (policy compliance / behavioral integrity)
+**Is what the agent actually does, has done, or is configured to do aligned with its authorized policy?** (intended vs observed behavior)
 
-The scanner is **not limited to source code.** Three input shapes are first-class:
+Praxa is **not limited to source code.** Three input shapes are first-class:
 
 - **Source repository** — code, configs, skill files, prompts, dependencies. Reveals what the agent is *configured* to do.
 - **Running deployment** — live memory files, action logs, configuration files, postmortems pulled from a deployed instance. Reveals what the agent *has done* and the current operational state.
 - **Behavioral artifacts** — chat transcripts, email histories, conversation logs, decision records. Reveals what the agent *actually does* in practice — including subtle policy drift that no static analysis can see.
 
-Most agent security failures trace to one of three causes: a misconfigured tool or unreviewed skill file (source); a policy that says one thing while live behavior does another (deployment); or a control that exists in policy but never fires when it should (behavior). The scanner reads whatever evidence is available, compares it to the Worker Remit, and writes findings to a local report. The methodology adapts: categories the input doesn't cover are scored at lower confidence and explicitly noted. Nothing phones home.
+Most agent security failures trace to one of three causes: a misconfigured tool or unreviewed skill file (source); a policy that says one thing while live behavior does another (deployment); or a control that exists in policy but never fires when it should (behavior). Praxa reads whatever evidence is available, compares it to the Worker Remit, and writes findings to a local report. The methodology adapts: categories the input doesn't cover are scored at lower confidence and explicitly noted. Nothing phones home.
 
-The name reflects the mission. Deckard is not part of the agent. It is the observer.
+The name reflects the mission. Praxa is not part of the agent. It is the observer.
 
 ### Two-layer model
 
-| Layer | What it represents | Deckard's view |
+| Layer | What it represents | Praxa's view |
 |-------|--------------------|----------------|
 | **Policy** | What the agent is authorized to be and do | Worker Remit |
 | **Capability** | What tools, channels, and permissions the agent actually has | The agent's workspace (code, config, dependencies) |
 
-The policy layer establishes intent. The capability layer is what's actually running. The scanner's job is to detect divergence between the two.
+The policy layer establishes intent. The capability layer is what's actually running. Praxa's job is to detect divergence between the two.
 
 ---
 
@@ -41,11 +42,11 @@ The policy layer establishes intent. The capability layer is what's actually run
 
 ### 2.1 Remit-first
 
-The Worker Remit is the source of truth for everything Deckard does. Every finding is measured against what the agent was authorized to be and do. Without a remit, Deckard cannot meaningfully evaluate the environment.
+The Worker Remit is the source of truth for everything Praxa does. Every finding is measured against what the agent was authorized to be and do. Without a remit, Praxa cannot meaningfully evaluate the environment.
 
 ### 2.2 Evidence-driven
 
-Every finding must cite specific evidence: a file path, a line number, a code pattern, a configuration value, an observed absence. Deckard does not assert risk — it observes, compares, and reports what it found and where.
+Every finding must cite specific evidence: a file path, a line number, a code pattern, a configuration value, an observed absence. Praxa does not assert risk — it observes, compares, and reports what it found and where.
 
 Every claim is tagged:
 - **Verified** — directly observed in an artifact that was read
@@ -54,23 +55,23 @@ Every claim is tagged:
 
 ### 2.3 Never reprint secrets
 
-Reports must never contain the literal value of a secret, credential, token, password, or private key — even when the source is already public, even when the value looks like a placeholder. Secrets are referred to by location and pattern only. See `skills/environment_scanner.md` for the full redaction rule.
+Reports must never contain the literal value of a secret, credential, token, password, or private key — even when the source is already public, even when the value looks like a placeholder. Secrets are referred to by location and pattern only. See `skills/behavior-verifier/SKILL.md` for the full redaction rule.
 
 ### 2.4 Least privilege
 
-The Deckard Scanner operates read-only on the agent's workspace. It does not take action on behalf of the agent. It does not modify the agent's code, skill files, configuration, or dependencies. It writes output only to its own `./reports/` directory in the current working directory.
+Praxa operates read-only on the agent's workspace. It does not take action on behalf of the agent. It does not modify the agent's code, skill files, configuration, or dependencies. It writes output only to its own `./reports/` directory in the current working directory.
 
 ### 2.5 Separation
 
-Deckard is not part of the agent it scans. It runs as a separate Claude Code invocation with its own session and its own output paths. An agent that has been compromised has no ability to interfere with the scanner.
+Praxa is not part of the agent it scans. It runs as a separate Claude Code invocation with its own session and its own output paths. An agent that has been compromised has no ability to interfere with Praxa.
 
 ### 2.6 No external dependencies required
 
-Deckard's only hard dependency is Claude Code and its API connection to the LLM. Everything else is local. All findings are written to local files. The HTML report is served from the filesystem and requires no web server. There is no database, message queue, logging infrastructure, or cloud service.
+Praxa's only hard dependency is Claude Code and its API connection to the LLM. Everything else is local. All findings are written to local files. The HTML report is served from the filesystem and requires no web server. There is no database, message queue, logging infrastructure, or cloud service.
 
 ### 2.7 LLM-native logic
 
-Deckard does not encode detection logic as code rules. The skill file and knowledge base — the prompts — are the logic. This is intentional.
+Praxa does not encode detection logic as code rules. The skill file and knowledge base — the prompts — are the logic. This is intentional.
 
 The patterns worth catching do not reduce to enumerable rules. "This skill file quietly expands the agent's reach in a direction inconsistent with its remit" is a judgment call. Policy-implementation divergence — where a policy document says one thing and the running code does another — requires reading both and reasoning about whether they match. Traditional detection code cannot do this. An LLM can.
 
@@ -82,10 +83,10 @@ The skill file gives Claude a calibrated framework for these judgments — what 
 
 ```
 ┌─────────────────────────────────────────┐
-│             DECKARD SCANNER             │
+│                  PRAXA                  │
 │                                         │
 │  Invoked in Claude Code by the operator │
-│  (reads environment_scanner.md skill)   │
+│  (reads behavior-verifier/SKILL.md)     │
 │                                         │
 │  reads: agent code, skills, tools,      │
 │  config, dependencies, policy docs,     │
@@ -102,20 +103,20 @@ The skill file gives Claude a calibrated framework for these judgments — what 
 │              │                          │
 │              ▼                          │
 │         Report Output                   │
-│  ./reports/<agent>-scan-<timestamp>.html│
+│  ./reports/<agent>-analysis-<timestamp>.html│
 │  ./reports/<agent>-findings-<date>.json │
 └─────────────────────────────────────────┘
 ```
 
-The scanner runs once per invocation. It reads, analyzes, writes two files, and exits. No daemon, no scheduler, no persistent state between runs. If continuous scanning is desired, wrap the invocation in whatever scheduler the operator already uses (cron, launchd, CI, GitHub Action).
+Praxa runs once per invocation. It reads, analyzes, writes two files, and exits. No daemon, no scheduler, no persistent state between runs. If continuous analysis is desired, wrap the invocation in whatever scheduler the operator already uses (cron, launchd, CI, GitHub Action).
 
 ---
 
-## 4. The Scanner
+## 4. The Verifier
 
 ### Invocation model
 
-The scanner is a Claude Code skill. The operator runs it by opening a Claude Code session in a directory containing the Deckard package and asking Claude Code to read and execute `skills/environment_scanner.md`. The scanner is an on-demand tool — each invocation performs one full scan and exits.
+Praxa is a Claude Code skill. The operator runs it by opening a Claude Code session in a directory containing the Praxa package and asking Claude Code to read and execute `skills/behavior-verifier/SKILL.md`. Praxa is an on-demand tool — each invocation performs one full analysis and exits.
 
 ### Inputs
 
@@ -124,7 +125,7 @@ The scanner is a Claude Code skill. The operator runs it by opening a Claude Cod
 | Worker Remit | `WORKER_REMIT.md` in the current directory or alongside the skill file |
 | Agent workspace | Path supplied by the operator at invocation time |
 | Knowledge base | `knowledge/` directory alongside the skill file |
-| Report template | `skills/report_template.html` alongside the skill file |
+| Report template | `report_template.html` alongside the skill file in `skills/behavior-verifier/` |
 
 ### Outputs
 
@@ -132,14 +133,14 @@ Both written to `./reports/` relative to the current working directory. The dire
 
 | Output | Filename |
 |--------|----------|
-| HTML report | `<agent-slug>-scan-<YYYY-MM-DD-HHMMSS>.html` |
+| HTML report | `<agent-slug>-analysis-<YYYY-MM-DD-HHMMSS>.html` |
 | Findings JSON | `<agent-slug>-findings-<YYYY-MM-DD>.json` |
 
 The HTML is a self-contained, static page with inline CSS — it renders correctly when opened as `file://` with no server. The JSON is the machine-readable findings data; use it for ingestion into ticketing, dashboards, or diffing across runs.
 
 ### Artifact scope
 
-The scanner reads whatever evidence the operator can supply. This is not a description of the agent; it is the agent — observed in code, in deployment state, or in behavior.
+Praxa reads whatever evidence the operator can supply. This is not a description of the agent; it is the agent — observed in code, in deployment state, or in behavior.
 
 **Source-shape artifacts** (a repository or project directory):
 
@@ -177,11 +178,11 @@ The scanner reads whatever evidence the operator can supply. This is not a descr
 |--------|-----------------|
 | Worker Remit | The authoritative comparison baseline — declared policy against which all other evidence is evaluated |
 
-The scanner adapts to whatever combination of inputs is available. A repo-only scan covers Manage Your Supply Chain comprehensively but cannot directly observe behavior. A behavior-only scan covers Implement Zero Trust violations the agent demonstrably committed but cannot assess code quality. A scan with multiple input shapes gets the most complete picture and the report's confidence levels are calibrated accordingly.
+Praxa adapts to whatever combination of inputs is available. A repo-only analysis covers Manage Your Supply Chain comprehensively but cannot directly observe behavior. A behavior-only analysis covers Implement Zero Trust violations the agent demonstrably committed but cannot assess code quality. An analysis with multiple input shapes gets the most complete picture and the report's confidence levels are calibrated accordingly.
 
 ### What it detects
 
-The scanner evaluates the workspace against the six RAISE categories and applies named detection patterns on top.
+Praxa evaluates the workspace against the six RAISE categories and applies named detection patterns on top.
 
 **RAISE scoring** — each category 0–5 with a confidence level:
 
@@ -196,7 +197,7 @@ The scanner evaluates the workspace against the six RAISE categories and applies
 
 **Named detection patterns:**
 
-- **Policy-implementation divergence** — the scanner reads the remit and the code, inventories every actionable remit rule, and classifies each as Verified / Gap / Partial / Vague Policy / Enforcement Not Possible.
+- **Policy-implementation divergence** — Praxa reads the remit and the code, inventories every actionable remit rule, and classifies each as Verified / Gap / Partial / Vague Policy / Enforcement Not Possible.
 - **Credential exposure in unexpected locations** — secrets in documentation, config snapshots, action logs, archive artifacts, or example files. (Reported by location and pattern only — never by value.)
 - **Planned-but-not-deployed controls** — design docs, TODOs, or architectural notes that describe controls which don't yet exist in the running code.
 - **Configuration gap detection** — exec auto-approval, disabled tool-loop detection, missing rate limits, absent logging, overly broad permission scopes.
@@ -206,17 +207,17 @@ The scanner evaluates the workspace against the six RAISE categories and applies
 
 ### Positive posture recognition
 
-The scanner reports what is working well, not only what is broken. Controls that are correctly implemented and verified during the scan — specific remit rules, scoped credentials, evidence of adversarial testing, structured action logs, approval gates — are surfaced explicitly alongside findings. Operators need to know where they can rely on existing controls.
+Praxa reports what is working well, not only what is broken. Controls that are correctly implemented and verified during the analysis — specific remit rules, scoped credentials, evidence of adversarial testing, structured action logs, approval gates — are surfaced explicitly alongside findings. Operators need to know where they can rely on existing controls.
 
 ---
 
 ## 5. The Worker Remit
 
-The Worker Remit is a markdown file describing what the agent is authorized to be and do. It is the policy baseline the scanner compares the agent's actual code and configuration against.
+The Worker Remit is a markdown file describing what the agent is authorized to be and do. It is the policy baseline Praxa compares the agent's actual code and configuration against.
 
-### The remit states policy. Deckard discovers implementation.
+### The remit states policy. Praxa discovers implementation.
 
-The remit is a policy document, not a system description. It declares intent — what the agent is for, what it is forbidden to do, who it is authorized to communicate with, what requires approval. It does not need to list tool names, file paths, or framework versions — Deckard finds those by reading the code.
+The remit is a policy document, not a system description. It declares intent — what the agent is for, what it is forbidden to do, who it is authorized to communicate with, what requires approval. It does not need to list tool names, file paths, or framework versions — Praxa finds those by reading the code.
 
 ### Required sections
 
@@ -238,7 +239,7 @@ Policy rules must be specific enough to be verifiable. A rule that can't be chec
 - **Too vague:** "Handle email appropriately" — no standard to compare code against.
 - **Specific enough:** "Message bodies must never be retrieved for senders not in the authorized counterparty list" — Claude can read the trust-check implementation and verify the order of operations.
 
-The test: could Deckard read this rule, read the agent's code, and determine whether the code complies? If the rule is about what the agent *does* (not how it does it), it's the right kind of rule for a remit.
+The test: could Praxa read this rule, read the agent's code, and determine whether the code complies? If the rule is about what the agent *does* (not how it does it), it's the right kind of rule for a remit.
 
 A remit with vague rules produces Low-confidence findings across the board. A remit with specific, testable constraints produces High-confidence, actionable findings.
 
@@ -278,18 +279,18 @@ All findings use a single JSON schema. The HTML report is a pretty-print of the 
 - `posture_score` is populated only on the summary entry (id ends in `-POSTURE`), carrying the weighted overall score and per-category breakdown. All other findings have `posture_score: null`.
 - `related_findings` lists the IDs of other findings that combine with this one (compound signal).
 - Every finding that maps to a remit rule must populate `policy_reference` with the exact quoted text, not just a section name.
-- Findings are emitted to a single JSON file per scan — the scanner does not maintain an append-only finding store.
+- Findings are emitted to a single JSON file per analysis — Praxa does not maintain an append-only finding store.
 
 ### Posture summary entry
 
-Every scan emits exactly one posture summary entry as the first item in the findings array. It carries the weighted overall score and per-category breakdown for machine consumption. Downstream systems can locate it by `id` suffix (`-POSTURE`) or by `detector_id: "raise_posture_summary"`.
+Every analysis emits exactly one posture summary entry as the first item in the findings array. It carries the weighted overall score and per-category breakdown for machine consumption. Downstream systems can locate it by `id` suffix (`-POSTURE`) or by `detector_id: "raise_posture_summary"`.
 
 ```json
 {
   "id": "DKRD-YYYY-MM-DD-POSTURE",
   "detector_id": "raise_posture_summary",
   "severity": "Informational",
-  "scan_summary": "The dominant finding pattern for this scan, 2–4 sentences of scanner synthesis.",
+  "scan_summary": "The dominant finding pattern for this analysis, 2–4 sentences of verifier synthesis.",
   "posture_score": {
     "weighted_overall": 1.3,
     "categories": {
@@ -304,9 +305,9 @@ Every scan emits exactly one posture summary entry as the first item in the find
 }
 ```
 
-Weights are the scanner's standard RAISE category weighting (Zero Trust 25%, others 15% each). The weighted overall is the sum of `score × weight` across categories, producing a 0.0–5.0 scalar.
+Weights are Praxa's standard RAISE category weighting (Zero Trust 25%, others 15% each). The weighted overall is the sum of `score × weight` across categories, producing a 0.0–5.0 scalar.
 
-The `scan_summary` field carries the same narrative rendered in the HTML report's Scan Summary section. Downstream systems that want a human-readable one-paragraph synthesis without parsing HTML should read this field.
+The `scan_summary` field carries the same narrative rendered in the HTML report's Behavior Summary section. Downstream systems that want a human-readable one-paragraph synthesis without parsing HTML should read this field.
 
 ### Severity model
 
@@ -326,66 +327,66 @@ Every finding carries both a RAISE category and, where applicable, OWASP LLM and
 
 ## 7. HTML Report
 
-Each scan produces a self-contained HTML report from a canonical template (`skills/report_template.html`). The template is brand-compliant and not subject to per-scan redesign — Step 11 of the scanner skill instructs the scanner to copy the template verbatim and substitute only data placeholders.
+Each analysis produces a self-contained HTML report from a canonical template (`skills/report_template.html`). The template is brand-compliant and not subject to per-analysis redesign — Step 11 of Praxa's skill instructs Praxa to copy the template verbatim and substitute only data placeholders.
 
 **Sections, in order:**
 
-1. **Header** — navy bar with Exabeam-green accent, agent name, scan timestamp, overall status badge
-2. **Intro band** — agent name, scan date, orientation text
+1. **Header** — navy bar with Exabeam-green accent, agent name, analysis timestamp, overall status badge
+2. **Intro band** — agent name, analysis date, orientation text
 3. **RAISE Scorecard** — weighted overall hero band plus a 3×2 grid of category cards (score, confidence, weight, rationale)
 4. **Remit Coverage** — every actionable remit rule with quoted text, status (Verified / Gap / Partial / Vague Policy / Enforcement Not Possible), and a link to the linked finding
 5. **Findings Register** — full findings ordered Critical → High → Medium → Low → Informational. Each card shows severity badge, ID, summary, RAISE/OWASP/ASI tags, quoted policy rule, evidence, and recommended action.
 6. **What's Working Well** — verified positive controls
-7. **Discovered Log Files** — log files found during the scan, annotated with source/purpose/modification time
-8. **Footer** — brand, artifact count, finding counts, Deckard version
+7. **Discovered Log Files** — log files found during the analysis, annotated with source/purpose/modification time
+8. **Footer** — brand, artifact count, finding counts, Praxa version
 
 The page renders correctly as `file://` — all CSS is inline, no external scripts, no external fonts beyond the declared Arial/Lausanne stack.
 
 ---
 
-## 8. Running a Scan
+## 8. Running an Analysis
 
 ### Prerequisites
 
 - Claude Code CLI installed and authenticated
 - An Anthropic API key (used by Claude Code)
-- The Deckard package in a directory Claude Code can see
+- The Praxa package in a directory Claude Code can see
 - A Worker Remit for the agent being scanned (or willingness to write one through Claude Code)
 
 No scheduler, daemon, installer, or configuration file is required.
 
 ### Steps
 
-1. Drop the Deckard directory anywhere on disk.
-2. Optionally place a `WORKER_REMIT.md` next to `skills/environment_scanner.md` (the scanner will find it automatically).
-3. Open a Claude Code session in the Deckard directory (or any parent).
+1. Drop the Praxa directory anywhere on disk.
+2. Optionally place a `WORKER_REMIT.md` next to `skills/behavior-verifier/SKILL.md` (Praxa will find it automatically).
+3. Open a Claude Code session in the Praxa directory (or any parent).
 4. Tell Claude Code:
-   > *"Please read and run skills/environment_scanner.md to scan [agent workspace path]."*
-5. The scanner reads the workspace, analyzes it, and writes two files to `./reports/`.
+   > *"Please read and run skills/behavior-verifier/SKILL.md to analyze [agent workspace path]."*
+5. Praxa reads the workspace, analyzes it, and writes two files to `./reports/`.
 6. Open the HTML report in a browser.
 
 ### Re-running
 
-Each invocation is independent. To re-scan after changes, invoke the skill again — a new pair of timestamped files is written to `./reports/`; prior reports are not overwritten.
+Each invocation is independent. To re-analyze after changes, invoke the skill again — a new pair of timestamped files is written to `./reports/`; prior reports are not overwritten.
 
 ### Automated scheduling
 
-Deckard does not ship a scheduler. If recurring scans are desired, wrap the Claude Code invocation in whatever scheduler the operator already uses. Example patterns: a nightly cron job running `claude -p "$(cat skills/environment_scanner.md)"`, a GitHub Action on pull request, a launchd timer on macOS. The scanner is stateless across invocations, so scheduling is purely an operator concern.
+Praxa does not ship a scheduler. If recurring scans are desired, wrap the Claude Code invocation in whatever scheduler the operator already uses. Example patterns: a nightly cron job running `claude -p "$(cat skills/behavior-verifier/SKILL.md)"`, a GitHub Action on pull request, a launchd timer on macOS. Praxa is stateless across invocations, so scheduling is purely an operator concern.
 
 ### Context window pressure on large workspaces
 
-A scan over a large workspace — archived or snapshotted projects, multi-directory trees, 50+ artifacts — can consume enough context that the Claude Code session compresses mid-scan. When this happens, the scanner is designed to degrade gracefully:
+An analysis over a large workspace — archived or snapshotted projects, multi-directory trees, 50+ artifacts — can consume enough context that the Claude Code session compresses mid-analysis. When this happens, Praxa is designed to degrade gracefully:
 
 - An **interim scorecard** is printed to stdout between Step 9 and Step 10, so the operator sees the RAISE posture even if the session later truncates.
 - The **final summary is written to a `.txt` file** in `./reports/` as well as stdout, so the summary survives even if terminal output is lost.
 
-If you're scanning a large archive and want to minimize context pressure, scan one subdirectory at a time and merge the findings JSON files afterward.
+If you're analyzing a large archive and want to minimize context pressure, analyze one subdirectory at a time and merge the findings JSON files afterward.
 
 ---
 
 ## 9. Knowledge Base
 
-The scanner's judgments are calibrated by a curated knowledge base in `knowledge/`. These files give Claude the domain vocabulary, risk taxonomy, and pattern recognition needed to produce consistent, well-classified findings across scans.
+Praxa's judgments are calibrated by a curated knowledge base in `knowledge/`. These files give Claude the domain vocabulary, risk taxonomy, and pattern recognition needed to produce consistent, well-classified findings across scans.
 
 | File | Contents |
 |------|----------|
@@ -402,21 +403,21 @@ The knowledge base does not implement detection logic. It gives Claude a calibra
 
 ### Model selection
 
-The scanner is designed to run on Anthropic's Sonnet-class models. Smaller models do not reliably perform the remit-implementation cross-referencing the scanner requires. The skill file does not hardcode a model — Claude Code selects based on its session configuration.
+Praxa is designed to run on Anthropic's Sonnet-class models. Smaller models do not reliably perform the remit-implementation cross-referencing Praxa requires. The skill file does not hardcode a model — Claude Code selects based on its session configuration.
 
 ### Confidence calibration beats threshold tuning
 
-When a finding is uncertain, mark it `"confidence": "Low"` and let it surface in the report rather than suppressing it. A Low-confidence signal that appears repeatedly across scanner runs is valuable signal that would be invisible if suppressed.
+When a finding is uncertain, mark it `"confidence": "Low"` and let it surface in the report rather than suppressing it. A Low-confidence signal that appears repeatedly across analysis runs is valuable signal that would be invisible if suppressed.
 
-### Specificity of the Worker Remit determines scanner quality
+### Specificity of the Worker Remit determines analysis quality
 
 Detection quality is directly proportional to remit specificity. A remit that says "handle tasks as directed" produces Low-confidence findings everywhere. A remit with specific channel lists, counterparty lists, tool inventories, and action boundaries produces High-confidence, actionable findings. When helping operators write a remit, push for verifiable rules.
 
 ### Success criteria
 
-The scanner is operating well when:
+Praxa is operating well when:
 
-1. A scan against an intentionally misconfigured test agent produces at least one Critical or High finding with specific file:line evidence and a recommended action.
+1. An analysis against an intentionally misconfigured test agent produces at least one Critical or High finding with specific file:line evidence and a recommended action.
 2. The HTML report renders correctly in a browser opened directly from `./reports/`.
 3. The findings JSON parses cleanly and is suitable for ingestion into downstream systems.
 4. Every actionable remit rule appears in the Remit Coverage section with a verified status.
@@ -427,14 +428,14 @@ See `examples/` for two reference scans against deliberately vulnerable agents (
 
 ## 11. Design Lineage
 
-The Deckard Scanner operationalizes the **RAISE Security Review Skill** — a structured framework for evaluating AI system security posture across six categories using real artifacts as inputs: code, prompts, configs, logs, policy documents. The RAISE Skill was designed as a one-time review; Deckard packages it as a droppable, re-runnable tool focused on the AI agent environment specifically.
+The Praxa operationalizes the **RAISE Security Review Skill** — a structured framework for evaluating AI system security posture across six categories using real artifacts as inputs: code, prompts, configs, logs, policy documents. The RAISE Skill was designed as a one-time review; Praxa packages it as a droppable, re-runnable tool focused on the AI agent environment specifically.
 
-The key design decisions in Deckard's synthesis:
-- A single Worker Remit serves as the policy baseline — the scanner's primary signal is divergence between declared policy and observed implementation.
+The key design decisions in Praxa's synthesis:
+- A single Worker Remit serves as the policy baseline — Praxa's primary signal is divergence between declared policy and observed implementation.
 - A unified finding schema with dual RAISE + OWASP classification provides consistent, standards-aligned output.
 - A canonical HTML template ensures every report looks identical regardless of which model produced it — design decisions are not delegated to the LLM.
 - The package is self-contained: drop the directory, run the skill, read the report. No installer, no config file, no persistent state.
 
 ---
 
-*The Deckard Scanner is built on the RAISE framework from* ***The Developer's Playbook for Large Language Model Security*** *by Steve Wilson — O'Reilly Media*
+*The Praxa is built on the RAISE framework from* ***The Developer's Playbook for Large Language Model Security*** *by Steve Wilson — O'Reilly Media*

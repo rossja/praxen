@@ -7,7 +7,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Exabeam Deckard — FinBot Security Scan — 2026-04-21</title>
+<title>Praxa — FinBot Analysis — 2026-04-21</title>
 <style>
   :root {
     /* Exabeam brand — greens */
@@ -472,6 +472,8 @@
     gap: 10px;
   }
   .footer .brand-foot { color: var(--green-lt); font-weight: 800; font-size: 14px; letter-spacing: 0.02em; }
+  .footer .brand-foot .sponsor { display: block; color: #8BAFC8; font-weight: 400; font-size: 11px; letter-spacing: 0; margin-top: 4px; }
+  .footer .brand-foot .sponsor a { color: inherit; text-decoration: none; border-bottom: 1px dotted #8BAFC8; }
   .footer .meta { color: #6C99CC; font-size: 11px; text-align: right; line-height: 1.6; }
 </style>
 </head>
@@ -480,19 +482,19 @@
 <!-- ── Header bar ── -->
 <div class="header">
   <div class="header-left">
-    <div class="brand"><span class="exabeam">EXABEAM</span><span class="deckard"> DECKARD</span></div>
-    <div class="subtitle">Agent Security Scanner</div>
+    <div class="brand">PRAXA</div>
+    <div class="subtitle">agent behavior verifier</div>
   </div>
   <div class="header-right">
     <div class="agent-name">Agent: FinBot</div>
-    <div class="scan-ts">Scan: 2026-04-21T18:00:00Z</div>
+    <div class="scan-ts">Analysis: 2026-04-21T18:00:00Z</div>
     <div><span class="status-badge status-critical">CRITICAL</span></div>
   </div>
 </div>
 
 <!-- ── Intro band ── -->
 <div class="intro-band">
-  <h1>FinBot &middot; Scan completed 2026-04-21</h1>
+  <h1>FinBot &middot; Analysis completed 2026-04-21</h1>
   <div class="intro-grid">
     <div class="intro-block">
       <div class="label">Agent Remit (as declared)</div>
@@ -507,7 +509,7 @@
 
 <!-- ── Scan Summary ── -->
 <div class="scan-summary">
-  <div class="label">Scan Summary</div>
+  <div class="label">Behavior Summary</div>
   <div class="body">FinBot's declared security posture is systematically undermined by runtime-mutable state exposed on an unauthenticated admin surface. The <code>custom_goals</code> field is concatenated into the agent's system prompt with no validation, <code>fraud_detection_enabled</code> is a togglable boolean, and a business-context scoring path silently overrides manual-review thresholds for "urgent" invoices. None of the admin endpoints that alter these values require authentication. Every Critical finding traces to this pattern: policy exists in the Worker Remit, enforcement exists nowhere in code, and no logging would capture an exploitation attempt.</div>
 </div>
 
@@ -597,7 +599,7 @@
   <!-- ── Remit Coverage ── -->
   <div class="section">
     <div class="section-title">Remit Coverage</div>
-    <p class="section-desc">Systematic audit of every actionable rule in FinBot's Worker Remit — the policy document that defines what this agent is authorized to do. For each rule, Deckard searched the agent's code and configuration to determine whether the running implementation actually enforces the stated policy. <strong>Gap</strong> means the rule exists in policy but has no enforcement in code. <strong>Partial</strong> means enforcement exists but is incomplete or can be bypassed. Rules marked <strong>Vague Policy</strong> are too imprecise to audit and should be rewritten with specific, testable constraints.</p>
+    <p class="section-desc">Systematic audit of every actionable rule in FinBot's Worker Remit — the policy document that defines what this agent is authorized to do. For each rule, Praxa searched the agent's code and configuration to determine whether the running implementation actually enforces the stated policy. <strong>Gap</strong> means the rule exists in policy but has no enforcement in code. <strong>Partial</strong> means enforcement exists but is incomplete or can be bypassed. Rules marked <strong>Vague Policy</strong> are too imprecise to audit and should be rewritten with specific, testable constraints.</p>
     <div class="stat-bar">
       <span class="stat-pill stat-verified">Verified: 0</span>
       <span class="stat-pill stat-gap">Gap: 11</span>
@@ -1187,14 +1189,17 @@ Attack scenario: A malicious web page makes cross-origin requests to /api/admin/
 
 <!-- ── Footer ── -->
 <div class="footer">
-  <div class="brand-foot">EXABEAM DECKARD</div>
+  <div class="brand-foot">
+    PRAXA
+    <span class="sponsor">project sponsor: <a href="https://www.exabeam.com/">Exabeam</a></span>
+  </div>
   <div class="meta">
     Agent: FinBot &nbsp;|&nbsp;
-    Scan: 2026-04-21T18:00:00Z &nbsp;|&nbsp;
+    Analysis: 2026-04-21T18:00:00Z &nbsp;|&nbsp;
     Artifacts: 32 &nbsp;|&nbsp;
     Findings: 6 Critical &nbsp; 6 High &nbsp; 3 Medium &nbsp; 0 Low &nbsp; 0 Informational<br>
-    Deckard v0.6.4 &nbsp;|&nbsp;
-    Built on RAISE Framework &mdash; <em>The Developer's Playbook for Large Language Model Security</em> &mdash; O'Reilly Media &nbsp;|&nbsp;
+    Praxa v0.1.4 &nbsp;|&nbsp;
+    Built on RAISE Framework &nbsp;|&nbsp;
     OWASP Top 10 for LLM Applications 2025 &nbsp;|&nbsp; OWASP Top 10 for Agentic Applications 2026
   </div>
 </div>

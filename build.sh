@@ -3,30 +3,30 @@
 # Copyright © 2026 Exabeam, Inc. All Rights Reserved.
 # Confidential and Proprietary. Do not distribute. Use by permission only.
 #
-# build.sh — package the Deckard Scanner distributable zip.
+# build.sh — package the Praxa distributable zip.
 #
-# Produces: dist/deckard-<version>.zip
+# Produces: dist/praxa-<version>.zip
 #
-# The distribution contains only the files an operator needs to run a scan.
+# The distribution contains only the files an operator needs to run an analysis.
 # Internal docs, deferred specs, build scripts, examples source files, and git
 # metadata are excluded. The examples/ directory IS included because it is the
 # primary "what does this produce?" artifact for new operators.
 
 set -euo pipefail
 
-# Read version from DECKARD_SPEC.md (line: "**Version:** X.Y.Z")
-VERSION="$(grep -m1 -E '^\*\*Version:\*\*' DECKARD_SPEC.md | sed -E 's/.*\*\*Version:\*\*[[:space:]]*//; s/[[:space:]]*$//')"
+# Read version from PRAXA_SPEC.md (line: "**Version:** X.Y.Z")
+VERSION="$(grep -m1 -E '^\*\*Version:\*\*' PRAXA_SPEC.md | sed -E 's/.*\*\*Version:\*\*[[:space:]]*//; s/[[:space:]]*$//')"
 
 if [[ -z "$VERSION" ]]; then
-  echo "error: could not read version from DECKARD_SPEC.md" >&2
+  echo "error: could not read version from PRAXA_SPEC.md" >&2
   exit 1
 fi
 
 DIST_DIR="dist"
-STAGE_DIR="$DIST_DIR/deckard-$VERSION"
-ZIP_PATH="$DIST_DIR/deckard-$VERSION.zip"
+STAGE_DIR="$DIST_DIR/praxa-$VERSION"
+ZIP_PATH="$DIST_DIR/praxa-$VERSION.zip"
 
-echo "Building Deckard Scanner v$VERSION"
+echo "Building Praxa v$VERSION"
 
 # Clean any prior stage / output for this version
 rm -rf "$STAGE_DIR" "$ZIP_PATH"
@@ -37,7 +37,7 @@ mkdir -p "$STAGE_DIR"
 INCLUDE=(
   ".claude-plugin"
   "README.md"
-  "DECKARD_SPEC.md"
+  "PRAXA_SPEC.md"
   "LICENSE"
   "WORKER_REMIT_template.md"
   "skills"
@@ -66,7 +66,7 @@ find "$STAGE_DIR" -name '__MACOSX' -type d -exec rm -rf {} +
 rm -rf "$STAGE_DIR/local"
 
 # Produce the zip
-(cd "$DIST_DIR" && zip -rq "deckard-$VERSION.zip" "deckard-$VERSION")
+(cd "$DIST_DIR" && zip -rq "praxa-$VERSION.zip" "praxa-$VERSION")
 
 # Clean up stage
 rm -rf "$STAGE_DIR"

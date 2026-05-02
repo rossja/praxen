@@ -4,4 +4,4 @@ local/
 
 # Build output (produced by build.sh; published via releases)
 dist/
-deckard-*.zip
+praxa-*.zip

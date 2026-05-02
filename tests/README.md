@@ -3,14 +3,14 @@
   Confidential and Proprietary. Do not distribute. Use by permission only.
 -->
 
-# Deckard Pre-Release Test Plan
+# Praxa Pre-Release Test Plan
 
-The Deckard scanner's regression test suite. Before every release, scan each target in this document and review the resulting reports against the baseline expectations below. Reports themselves are **not** kept in this directory — they regenerate on each run and change between scans.
+Praxa's regression test suite. Before every release, analyze each target in this document and review the resulting reports against the baseline expectations below. Reports themselves are **not** kept in this directory — they regenerate on each run and change between analyses.
 
 ## Directory contents
 
 - `README.md` — this file
-- `remits/` — the Worker Remits developed for each test agent. These are reusable and do not change between scans.
+- `remits/` — the Worker Remits developed for each test agent. These are reusable and do not change between analyses.
 
 ## Pre-release checklist
 
@@ -19,24 +19,24 @@ The Deckard scanner's regression test suite. Before every release, scan each tar
    - Scan the already-built zip against the target workspace (confirms the distributed zip works), **or**
    - Scan from the repo's `skills/` + `knowledge/` directly (confirms skill edits land correctly).
 3. Review each report against the baseline expectations in this document.
-4. Any regression — a material finding dropped, a critical theme missed, a weighted score that moves without code changes on the scanner — blocks the release.
+4. Any regression — a material finding dropped, a critical theme missed, a weighted score that moves without code changes on Praxa — blocks the release.
 5. New findings or severity shifts that reflect calibration improvements are fine. Note them in the release notes.
 
-## How to run a scan
+## How to run an analysis
 
 For each target:
 
 1. Clone or re-extract the target repository (URLs below).
 2. Stage the workspace scope — the paths inside the target repo that constitute the agent code (notes below for each target).
-3. Create a scan working directory, e.g., `/tmp/<target>_scan/reports/`.
-4. Copy the corresponding remit from `remits/` into the scan working directory as `WORKER_REMIT.md`.
+3. Create an analysis working directory, e.g., `/tmp/<target>_scan/reports/`.
+4. Copy the corresponding remit from `remits/` into the analysis working directory as `WORKER_REMIT.md`.
 5. Open a Claude Code session with the working directory as CWD.
-6. Instruct Claude Code to read `skills/environment_scanner.md` and scan the workspace path.
-7. Review `<target>-scan-<timestamp>.html` in `reports/`.
+6. Instruct Claude Code to read `skills/behavior-verifier/SKILL.md` and analyze the workspace path.
+7. Review `<target>-analysis-<timestamp>.html` in `reports/`.
 
 ## Test targets
 
-Ordered from simplest (intentionally-vulnerable CTF) to most complex (active production agent). Run them in order for a release; the earlier scans catch skill-execution issues fast, the later scans exercise subtle detection.
+Ordered from simplest (intentionally-vulnerable CTF) to most complex (active production agent). Run them in order for a release; the earlier analyses catch skill-execution issues fast, the later analyses exercise subtle detection.
 
 ---
 
@@ -45,7 +45,7 @@ Ordered from simplest (intentionally-vulnerable CTF) to most complex (active pro
 **Remit:** `remits/finbot.md`
 **Source:** https://github.com/OWASP-ASI/finbot-ctf-demo
 **Scope:** full repo root (the agent code is small — Flask + SQLAlchemy app)
-**Notes:** Deliberately vulnerable CTF agent. Autonomous invoice processor. The scanner should catch runtime-mutable goal overrides, unauthenticated admin endpoints, fraud-detection toggles, business-context bypass of manual review thresholds, invoice-description injection into LLM context. This is the canonical "hobby-grade insecure agent" test — if the scanner fails to produce 4+ Critical findings here, something is broken.
+**Notes:** Deliberately vulnerable CTF agent. Autonomous invoice processor. The Praxa should catch runtime-mutable goal overrides, unauthenticated admin endpoints, fraud-detection toggles, business-context bypass of manual review thresholds, invoice-description injection into LLM context. This is the canonical "hobby-grade insecure agent" test — if Praxa fails to produce 4+ Critical findings here, something is broken.
 **Baseline expectation:** 5-10 Critical / 5-10 High, weighted ≈ 0.6-0.9 / 5.0.
 
 ### 2. HelperBot — DVAA training agent
@@ -54,7 +54,7 @@ Ordered from simplest (intentionally-vulnerable CTF) to most complex (active pro
 **Source:** https://github.com/opena2a-org/damn-vulnerable-ai-agent (HelperBot persona in `src/core/agents.js`)
 **Scope:** a minimal workspace containing `agents.js`, `vulnerabilities.js`, `index.js`, and the LLM client files. The HelperBot definition is in `agents.js` lines ~43-78.
 **Notes:** Intentionally vulnerable training agent from the DVAA platform. Smaller and simpler than FinBot — good quick smoke test. Regression test of choice: fast turnaround, clear baseline, exercises common findings (input validation, system-prompt API key embed, write_file without path guard, context manipulation, no audit logging, no rate limit).
-**Baseline expectation:** 3-4 Critical / 6-11 High / 1-2 Medium, weighted ≈ 0.45 / 5.0 (Absent). Stable across scanner versions.
+**Baseline expectation:** 3-4 Critical / 6-11 High / 1-2 Medium, weighted ≈ 0.45 / 5.0 (Absent). Stable across Praxa versions.
 
 ### 3. LangChain SQL Agent
 
@@ -101,7 +101,7 @@ Ordered from simplest (intentionally-vulnerable CTF) to most complex (active pro
 **Remit:** `remits/aider.md`
 **Source:** https://github.com/Aider-AI/aider
 **Scope:** `aider/*.py` (top-level) + `aider/coders/`.
-**Notes:** Mature, production-quality agent with a developer-in-the-loop safety model. The findings are subtle — "Trust this message" directive in prompt, `# ai!` comment auto-execution in `--watch-files`, `/add` accepts absolute paths, declared-but-never-consulted sensitive-file list. Tests that the scanner produces actionable findings even on well-engineered agents, and doesn't get fooled by confirmation-prompt theater. Also a Jinja2 evidence-block test — catches if the Step 11 verification grep regex broke.
+**Notes:** Mature, production-quality agent with a developer-in-the-loop safety model. The findings are subtle — "Trust this message" directive in prompt, `# ai!` comment auto-execution in `--watch-files`, `/add` accepts absolute paths, declared-but-never-consulted sensitive-file list. Tests that Praxa produces actionable findings even on well-engineered agents, and doesn't get fooled by confirmation-prompt theater. Also a Jinja2 evidence-block test — catches if the Step 11 verification grep regex broke.
 **Baseline expectation:** 3 Critical / 6 High / 4 Medium, weighted ≈ 1.50 / 5.0.
 
 ### 9. OpenHands — autonomous software engineering platform
@@ -126,7 +126,7 @@ For each target, open the HTML report and check:
 - Posture summary entry in the JSON has `scan_summary` populated
 
 **Finding quality**
-- The Scan Summary narrative reads as diagnostic, not templated
+- The Behavior Summary narrative reads as diagnostic, not templated
 - Every Critical / High finding has specific file:line evidence
 - Recommended actions name the file and change, not generic advice
 - OWASP tags include the full category name (`LLM01 — Prompt Injection`, not `LLM01`)

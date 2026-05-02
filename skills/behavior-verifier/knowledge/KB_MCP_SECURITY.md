@@ -4,12 +4,12 @@
 -->
 
 # Knowledge Base: OWASP Secure MCP Server Development (2026)
-*Distilled for Deckard — MCP security evaluation context*
+*Distilled for Praxa — MCP security evaluation context*
 
 Source: A Practical Guide for Secure MCP Server Development v1.0 (February 2026)
 License: CC BY-SA 4.0 — genai.owasp.org
 
-This file is a Deckard knowledge base extract focused on evaluating MCP (Model Context Protocol) servers found in an agent's environment. When the Deckard Scanner discovers MCP server configurations, tool definitions, or plugin manifests, use this knowledge base to assess their security posture.
+This file is a Praxa knowledge base extract focused on evaluating MCP (Model Context Protocol) servers found in an agent's environment. When the Praxa discovers MCP server configurations, tool definitions, or plugin manifests, use this knowledge base to assess their security posture.
 
 MCP servers act as bridges between AI assistants and external tools or data sources. Unlike traditional APIs, they operate with delegated user permissions, support dynamic tool loading, and can chain multiple tool calls — amplifying the impact of any single vulnerability.
 
@@ -165,7 +165,7 @@ When scanning an agent's MCP configuration or MCP server code, look for these pr
 
 ## MCP Security Minimum Bar (Checklist)
 
-When Deckard's scanner evaluates an MCP server, use this as the baseline. Any "No" is a finding.
+When Praxa evaluates an MCP server, use this as the baseline. Any "No" is a finding.
 
 | Check | Pass / Fail |
 |-------|-------------|
@@ -189,7 +189,7 @@ When Deckard's scanner evaluates an MCP server, use this as the baseline. Any "N
 
 ---
 
-## Deckard Scan Priorities for MCP
+## Praxa Analysis Priorities for MCP
 
 When an MCP server or local `.mcp.json` is discovered in the agent's environment:
 
@@ -213,4 +213,4 @@ When an MCP server or local `.mcp.json` is discovered in the agent's environment
 ---
 
 *Source: A Practical Guide for Secure MCP Server Development v1.0 — genai.owasp.org — CC BY-SA 4.0*
-*Distilled for the Exabeam Deckard Agent Security Scanner knowledge base*
+*Distilled for the Praxa knowledge base*

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Exabeam Deckard — HelperBot Security Scan — 2026-04-21</title>
+<title>Praxa — HelperBot Analysis — 2026-04-21</title>
 <style>
   :root {
     --navy: #0D1B2A;
@@ -320,6 +320,8 @@
     gap: 10px;
   }
   .footer .brand-foot { color: var(--green-lt); font-weight: 800; font-size: 14px; }
+  .footer .brand-foot .sponsor { display: block; color: #8BAFC8; font-weight: 400; font-size: 11px; margin-top: 4px; }
+  .footer .brand-foot .sponsor a { color: inherit; text-decoration: none; border-bottom: 1px dotted #8BAFC8; }
   .footer .meta { color: #6C99CC; font-size: 12px; text-align: right; }
 </style>
 </head>
@@ -328,21 +330,21 @@
 <!-- ── Header ── -->
 <div class="header">
   <div class="header-left">
-    <div class="brand"><span class="exabeam">EXABEAM</span><span class="deckard"> DECKARD</span></div>
-    <div class="subtitle">Agent Security Scanner</div>
+    <div class="brand">PRAXA</div>
+    <div class="subtitle">agent behavior verifier</div>
   </div>
   <div class="header-right">
     <div class="agent-name">Agent: HelperBot v1.5</div>
-    <div class="scan-ts">Scan: 2026-04-21T22:16:56Z</div>
+    <div class="scan-ts">Analysis: 2026-04-21T22:16:56Z</div>
     <div><span class="status-badge">CRITICAL</span></div>
   </div>
 </div>
 
 <!-- ── Intro band ── -->
 <div class="intro-band">
-  <h1>Exabeam Deckard Agent Security Scanner — Scan Report &middot; Agent: HelperBot &middot; Scan completed: 2026-04-21</h1>
+  <h1>Praxa — Scan Report &middot; Agent: HelperBot &middot; Scan completed: 2026-04-21</h1>
   <p>
-    This report is produced by the Exabeam Deckard Agent Security Scanner (Deckard Scanner) using the Responsible AI Software Engineering (RAISE) framework, OWASP Top 10 for LLM Applications (2025),
+    This report is produced by the Praxa (Praxa) using the Responsible AI Software Engineering (RAISE) framework, OWASP Top 10 for LLM Applications (2025),
     and OWASP Top 10 for Agentic Applications (2026). All findings are evidence-tagged [Verified], [Inferred], or [Unknown].
     Absence of a control in a production configuration is treated as a finding, not a documentation gap.
     8 artifacts were read. The scan scope is the HELPERBOT agent definition and its shared runtime infrastructure.
@@ -860,13 +862,16 @@ Jailbreak surface fully open to social engineering.</div>
 
 <!-- ── Footer ── -->
 <div class="footer">
-  <div class="brand-foot">EXABEAM DECKARD</div>
+  <div class="brand-foot">
+    PRAXA
+    <span class="sponsor">project sponsor: <a href="https://www.exabeam.com/">Exabeam</a></span>
+  </div>
   <div class="meta">
     Agent: HelperBot v1.5 &nbsp;|&nbsp;
-    Scan: 2026-04-21T22:16:56Z &nbsp;|&nbsp;
+    Analysis: 2026-04-21T22:16:56Z &nbsp;|&nbsp;
     Artifacts: 8 &nbsp;|&nbsp;
     Findings: 4 Critical &nbsp; 3 High &nbsp; 1 Medium &nbsp; 0 Low &nbsp; 1 Informational<br>
-    Built on RAISE Framework &mdash; <em>The Developer's Playbook for Large Language Model Security</em> &mdash; O'Reilly Media &nbsp;|&nbsp;
+    Built on RAISE Framework &nbsp;|&nbsp;
     OWASP Top 10 for LLM Applications 2025 &nbsp;|&nbsp; OWASP Top 10 for Agentic Applications 2026
   </div>
 </div>

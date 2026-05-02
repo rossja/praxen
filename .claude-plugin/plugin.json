@@ -1,7 +1,7 @@
 {
-  "name": "deckard",
-  "version": "0.7.0",
-  "description": "Exabeam Deckard Agent Security Scanner — a policy compliance scanner for AI agents. Compares an agent's declared policy (Worker Remit) against the available evidence — source code, live deployment state, or chat transcripts — and reports where observed behavior diverges from declared intent. Not just a source-code scanner.",
+  "name": "praxa",
+  "version": "0.1.0",
+  "description": "Praxa — agent behavior verifier. Compares an AI agent's declared policy (Worker Remit) against the available evidence — source code, live deployment state, or behavioral artifacts — and reports where observed behavior diverges from declared intent. Make sure your agent does its job — and only its job.",
   "author": {
     "name": "Exabeam",
     "url": "https://www.exabeam.com/"
@@ -10,12 +10,12 @@
   "repository": "https://github.com/Exabeam/deckard",
   "license": "SEE LICENSE IN LICENSE",
   "keywords": [
-    "ai-security",
-    "agent-security",
+    "agent-behavior-verifier",
+    "ai-agent-security",
     "raise-framework",
     "owasp",
-    "security-scanner",
-    "policy-implementation-divergence"
+    "policy-implementation-divergence",
+    "worker-remit"
   ],
   "skills": "./skills/"
 }

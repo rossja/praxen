@@ -4,12 +4,12 @@
 -->
 
 # Knowledge Base: RAISE Scanning Heuristics and Patterns
-*Distilled for Deckard Scanner calibration*
+*Distilled for Praxa calibration*
 
 Source: RAISE Security Review Skill (RUBRIC.md, HEURISTICS.md, INTAKE_PATTERNS.md)
 Built on: *The Developer's Playbook for Large Language Model Security* by Steve Wilson — O'Reilly Media
 
-This file gives the Deckard Scanner its calibration: how to read different artifact types, what signals map to which risks, how to score with confidence, and what mistakes to avoid. It is the RAISE framework's analytical methodology adapted for continuous agent scanning rather than one-time review.
+This file gives the Praxa its calibration: how to read different artifact types, what signals map to which risks, how to score with confidence, and what mistakes to avoid. It is the RAISE framework's analytical methodology adapted for continuous agent scanning rather than one-time review.
 
 ---
 
@@ -34,7 +34,7 @@ The most important scan a RAISE-based scanner can perform is comparing what a po
 
 ### Specificity produces signal
 
-Vague policies produce vague findings. When a Worker Remit or policy document is specific — "message bodies MUST NEVER be retrieved for unknown senders" — the scanner can verify compliance in code. When it says "handle email appropriately," it cannot. Flag vague policy as a finding in its own right: a policy that can't be verified can't be enforced.
+Vague policies produce vague findings. When a Worker Remit or policy document is specific — "message bodies MUST NEVER be retrieved for unknown senders" — Praxa can verify compliance in code. When it says "handle email appropriately," it cannot. Flag vague policy as a finding in its own right: a policy that can't be verified can't be enforced.
 
 ### Artifacts are snapshots, not ground truth
 
@@ -124,7 +124,7 @@ Different artifact types reveal different things. For each artifact found in the
 
 **What they reveal:** The agent's **runtime context surface** — everything loaded into the LLM context *before the first user turn*. These files function as secondary system prompts regardless of their names or apparent purpose. Common examples: `SOUL.md` (identity), `AGENTS.md` (behavioral rules, tool grants), `MEMORY.md` (long-term memory), `USER.md` (user profile), `IDENTITY.md`, `HEARTBEAT.md`, `RULES_*.md`, daily log files, or files in `memory/` or `sessions/` directories.
 
-**Why this class is distinct:** These files typically look like documentation. Their security-relevant content — capability grants, writability clauses, channel references, PII — is often a single line buried in prose. The main artifact scan pass is calibrated to code and config and will systematically underweight them. The scanner must read them *as system prompts* to evaluate them correctly. See `environment_scanner.md` Step 4b for the dedicated discovery procedure.
+**Why this class is distinct:** These files typically look like documentation. Their security-relevant content — capability grants, writability clauses, channel references, PII — is often a single line buried in prose. The main artifact scan pass is calibrated to code and config and will systematically underweight them. The scanner must read them *as system prompts* to evaluate them correctly. See `SKILL.md` Step 4b for the dedicated discovery procedure.
 
 **How to find them:**
 - Check `CLAUDE.md`, `README.md`, `ARCHITECTURE.md`, `AGENTS.md`, or any bootstrap documentation for an explicit load order (e.g., "*When the agent starts, it reads: SOUL.md, USER.md, memory/YYYY-MM-DD.md, and MEMORY.md*")
@@ -450,4 +450,4 @@ Recognition of positive posture belongs in every scanner report. It gives operat
 
 *Source: RAISE Security Review Skill — RUBRIC.md, HEURISTICS.md, INTAKE_PATTERNS.md*
 *Built on: The Developer's Playbook for Large Language Model Security by Steve Wilson — O'Reilly Media*
-*Distilled for the Exabeam Deckard Agent Security Scanner knowledge base*
+*Distilled for the Praxa knowledge base*

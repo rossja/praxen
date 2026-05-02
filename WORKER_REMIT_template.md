@@ -4,13 +4,13 @@
 -->
 
 # Worker Remit
-*Exabeam Deckard Agent Security Scanner — Agent Policy*
+*Praxa — Agent Policy*
 
 This file defines the authorized identity, behavior, and boundaries of the agent being scanned.
-It is the policy contract Deckard evaluates the agent's code and configuration against.
-Customize this template for the specific agent before running a scan.
+It is the policy contract Praxa evaluates the agent's code and configuration against.
+Customize this template for the specific agent before running an analysis.
 
-**The remit states policy; Deckard discovers implementation. Write rules about what the agent *does*, not how it does it.**
+**The remit states policy; Praxa discovers implementation. Write rules about what the agent *does*, not how it does it.**
 
 ---
 
@@ -48,7 +48,7 @@ What this agent is supposed to do. Be specific — vague descriptions produce we
 
 ## Non-Goals (Out of Scope)
 
-Work this agent should never do, regardless of instruction. Deckard will flag any observed activity in these areas.
+Work this agent should never do, regardless of instruction. Praxa will flag any observed activity in these areas.
 
 - 
 - 
@@ -88,7 +88,7 @@ Work this agent should never do, regardless of instruction. Deckard will flag an
 
 ### Allowed Tools (Known Good Baseline)
 
-*List every tool the agent is expected to have at runtime. Deckard will flag any tool that disappears from this list.*
+*List every tool the agent is expected to have at runtime. Praxa will flag any tool that disappears from this list.*
 
 - 
 
@@ -98,7 +98,7 @@ Work this agent should never do, regardless of instruction. Deckard will flag an
 
 ### Forbidden Tools
 
-*Deckard will emit a Critical finding if any of these appear in the agent's tool inventory or code.*
+*Praxa will emit a Critical finding if any of these appear in the agent's tool inventory or code.*
 
 - 
 
@@ -111,7 +111,7 @@ Work this agent should never do, regardless of instruction. Deckard will flag an
 
 ### Sensitive Data Classes
 
-*Data that requires special handling. Deckard will flag unexpected access or movement of these classes.*
+*Data that requires special handling. Praxa will flag unexpected access or movement of these classes.*
 
 - 
 
@@ -126,15 +126,15 @@ Work this agent should never do, regardless of instruction. Deckard will flag an
 ## Action Boundaries
 
 > **Writing verifiable rules**
-> Every rule in this section should state a testable constraint on behavior — something Deckard can check against the agent's code or logs. Vague intent produces weak detection.
+> Every rule in this section should state a testable constraint on behavior — something Praxa can check against the agent's code or logs. Vague intent produces weak detection.
 >
 > - ✓ *"Message bodies must never be fetched for senders not in the authorized counterparty list"*
 > - ✓ *"Responding to unknown senders requires human approval — no automated reply"*
 > - ✗ *"Handle email appropriately"*
 > - ✗ *"Be careful with sensitive data"*
 >
-> The first two rules give Deckard something to audit. The second two don't.
-> Deckard will inventory every rule in this document and report any it cannot verify — so the more specific your rules, the more useful the coverage report.
+> The first two rules give Praxa something to audit. The second two don't.
+> Praxa will inventory every rule in this document and report any it cannot verify — so the more specific your rules, the more useful the coverage report.
 
 ### Allowed Without Approval
 - 
@@ -144,7 +144,7 @@ Work this agent should never do, regardless of instruction. Deckard will flag an
 
 ### Never Allowed
 
-*Deckard will emit a Critical finding for any of these.*
+*Praxa will emit a Critical finding for any of these.*
 
 - 
 
@@ -159,7 +159,7 @@ Work this agent should never do, regardless of instruction. Deckard will flag an
 
 ### Expected Patterns
 
-*What normal work looks like. Deckard uses this to distinguish ordinary operation from drift.*
+*What normal work looks like. Praxa uses this to distinguish ordinary operation from drift.*
 
 - 
 
@@ -173,7 +173,7 @@ Work this agent should never do, regardless of instruction. Deckard will flag an
 
 ## Known Good Baseline
 
-*Snapshot of what this agent looks like when operating correctly. Both loops use this for comparison.*
+*Snapshot of what this agent looks like when operating correctly. Used for comparison.*
 
 ### Typical Tool Inventory
 - 
@@ -211,7 +211,7 @@ Work this agent should never do, regardless of instruction. Deckard will flag an
 
 ## Risk Sensitivities
 
-*Areas where extra scrutiny applies. Deckard will apply lower thresholds for findings in these areas.*
+*Areas where extra scrutiny applies. Praxa will apply lower thresholds for findings in these areas.*
 
 - 
 
@@ -219,9 +219,9 @@ Work this agent should never do, regardless of instruction. Deckard will flag an
 
 ## Escalation Rules
 
-These rules drive Deckard's reporting layer. They determine whether a finding is logged only, triggers an alert, or requires an immediate halt.
+These rules drive Praxa's reporting layer. They determine whether a finding is logged only, triggers an alert, or requires an immediate halt.
 
-*State each condition precisely — Deckard will check whether the agent's code implements the described response. "Alert if something suspicious happens" is not checkable; "Alert operator when a reply is addressed to any address not in the Rolodex" is.*
+*State each condition precisely — Praxa will check whether the agent's code implements the described response. "Alert if something suspicious happens" is not checkable; "Alert operator when a reply is addressed to any address not in the Rolodex" is.*
 
 ### Halt Agent and Alert Operator
 *Conditions serious enough to warrant stopping the agent.*
@@ -252,5 +252,5 @@ These rules drive Deckard's reporting layer. They determine whether a finding is
 
 ---
 
-*Worker Remit — Exabeam Deckard Agent Security Scanner*
+*Worker Remit — Praxa*
 *Customized for: [Worker Name] | Version: [X.X] | [Date]*

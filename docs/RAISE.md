@@ -5,7 +5,7 @@
 
 # The RAISE Framework
 
-The Exabeam Deckard Agent Security Scanner evaluates every AI agent against the **Responsible AI Software Engineering (RAISE)** framework — a six-category methodology for assessing AI system security, covered in depth at *[The Developer's Playbook for Large Language Model Security](https://www.oreilly.com/library/view/the-developers-playbook/9781098162191/)*.
+The Praxa evaluates every AI agent against the **Responsible AI Software Engineering (RAISE)** framework — a six-category methodology for assessing AI system security, covered in depth at *[The Developer's Playbook for Large Language Model Security](https://www.oreilly.com/library/view/the-developers-playbook/9781098162191/)*.
 
 It's a structured way to answer the question: *does this AI system have the controls it needs, are they actually implemented, and is it operated responsibly?*
 
@@ -13,7 +13,7 @@ It's a structured way to answer the question: *does this AI system have the cont
 
 ## The Six Categories
 
-Each Deckard scan scores an agent 0–5 in every category and reports a per-category rationale plus a weighted overall score.
+Each Praxa scan scores an agent 0–5 in every category and reports a per-category rationale plus a weighted overall score.
 
 ### Limit Your Domain
 
@@ -89,13 +89,13 @@ The weighted overall is computed as `Σ (category_score × category_weight)` acr
 
 ## Confidence Levels
 
-Alongside each category score, the scanner reports a **confidence level**:
+Alongside each category score, Praxa reports a **confidence level**:
 
 - **High** — the control, or its absence, is directly stated in observable artifacts (code, config, logs)
 - **Medium** — a reasonable conclusion from indirect evidence (architecture, file naming, imports)
 - **Low** — no direct evidence; scored from absence or heuristics alone
 
-Low confidence is valid and expected for categories where the scanner has limited visibility. It doesn't mean the score is wrong — it means more evidence would be useful.
+Low confidence is valid and expected for categories where Praxa has limited visibility. It doesn't mean the score is wrong — it means more evidence would be useful.
 
 ---
 
@@ -108,7 +108,7 @@ The scanner follows a small set of explicit anti-patterns:
 3. **Don't penalize disclosure.** A team that honestly documents gaps is not worse than one that obscures them. Score the control, not the communication.
 4. **Context matters.** No rate limiting on an internal dev tool is Medium severity; on a public API it is High or Critical.
 
-These principles are implemented in the scoring guidance the scanner loads from `knowledge/KB_RAISE_SCANNING.md`.
+These principles are implemented in the scoring guidance Praxa loads from `knowledge/KB_RAISE_SCANNING.md`.
 
 ---
 
@@ -117,7 +117,7 @@ These principles are implemented in the scoring guidance the scanner loads from 
 A scan result is a snapshot. Use it to:
 
 - **Identify the weakest category** and prioritize remediation there. Zero Trust issues generally have the highest ROI because of their weighting and exploitability.
-- **Track maturity over time.** Score deltas across scans are a leading indicator of posture change — both improvements and regressions.
+- **Track maturity over time.** Score deltas across analyses are a leading indicator of posture change — both improvements and regressions.
 - **Compare defaults vs. hardened configurations.** Many agents ship with permissive defaults. Re-scanning after applying recommended operator configuration often reveals that controls exist but weren't enforced.
 
-A score is one signal. The Findings Register, Remit Coverage table, and Scan Summary in the full report contain the specifics you need to act on.
+A score is one signal. The Findings Register, Remit Coverage table, and Behavior Summary in the full report contain the specifics you need to act on.
