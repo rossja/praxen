@@ -97,6 +97,27 @@ def main():
     r = run_render(["--findings", FIXTURE, "--out-txt", out_txt_only])
     check("--out-txt without --out-html works", r.returncode == 0 and os.path.exists(out_txt_only))
 
+    # 4b. cited code that *looks* like a template placeholder must not corrupt the
+    #     render or trip the "unsubstituted placeholder" check.
+    spiced = json.loads(json.dumps(data))
+    spiced["findings"][0]["evidence"].append(
+        "docker-compose.yml:12 — DATABASE_URL: {{DATABASE_URL}}, AGENT: {{AGENT_NAME}}")
+    spiced["raise_posture"]["categories"][0]["rationale"] += " (config uses {{SCORE}} interpolation)"
+    sp_path = os.path.join(tmp, "spiced.json")
+    sp_html = os.path.join(tmp, "spiced.html")
+    json.dump(spiced, open(sp_path, "w"))
+    r = run_render(["--findings", sp_path, "--template", TEMPLATE, "--out-html", sp_html,
+                    "--out-txt", os.path.join(tmp, "spiced.txt")])
+    sp_out = open(sp_html, encoding="utf-8").read() if os.path.exists(sp_html) else ""
+    check("render survives {{placeholder-like}} text in cited evidence/rationale",
+          r.returncode == 0, r.stderr.strip())
+    check("cited braces are neutralised, not substituted, and not flagged as unfilled",
+          "{{DATABASE_URL}}" not in sp_out          # no raw double braces survive...
+          and "{{AGENT_NAME}}" not in sp_out        # ...for either the cited or the template forms
+          and "{{SCORE}}" not in sp_out
+          and "&#123;&#123;DATABASE_URL&#125;&#125;" in sp_out   # cited braces -> entities
+          and "FinBot" in sp_out)                   # the real AGENT_NAME placeholder still resolved
+
     # 5. negative cases — each must exit non-zero with a useful message
     def negative(name, mutate):
         bad = json.loads(json.dumps(data))

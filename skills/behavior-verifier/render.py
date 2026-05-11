@@ -97,9 +97,18 @@ _RICH_FIELDS = {
 
 
 # ── escaping ─────────────────────────────────────────────────────────────────
+def _neutralise_braces(s: str) -> str:
+    """Turn literal ``{{`` / ``}}`` into numeric entities so a piece of code cited
+    in a finding (a Jinja/Mustache/k8s/Compose template, ``{{DATABASE_URL}}`` and the
+    like) can never collide with — or get mistaken for — a Praxa template placeholder.
+    Renders identically to the literal braces in a browser."""
+    return s.replace("{{", "&#123;&#123;").replace("}}", "&#125;&#125;")
+
+
 def esc(value) -> str:
-    """HTML-escape a value for either text content or an attribute value."""
-    return html.escape(str(value))
+    """HTML-escape a value for either text content or an attribute value, and
+    neutralise any literal ``{{...}}`` (see ``_neutralise_braces``)."""
+    return _neutralise_braces(html.escape(str(value)))
 
 
 def render_rich(text, allow=("code",)) -> str:
@@ -108,7 +117,7 @@ def render_rich(text, allow=("code",)) -> str:
     The Praxa skill emits these fields as plain prose plus, at most, ``<code>``
     (and ``<p>`` in the behavior summary). We protect those exact tags, escape
     everything else, then restore them — so an unbalanced ``<`` in the prose is
-    rendered as text, not as a stray tag.
+    rendered as text, not as a stray tag. Literal ``{{...}}`` is neutralised too.
     """
     text = str(text)
     if "\x00" in text:
@@ -121,7 +130,7 @@ def render_rich(text, allow=("code",)) -> str:
         return f"\x00{len(saved) - 1}\x00"
 
     protected = re.sub(rf"</?(?:{tag_alt})\s*>", _grab, text, flags=re.IGNORECASE)
-    escaped = html.escape(protected)
+    escaped = _neutralise_braces(html.escape(protected))
     return re.sub(r"\x00(\d+)\x00", lambda m: saved[int(m.group(1))], escaped)
 
 
