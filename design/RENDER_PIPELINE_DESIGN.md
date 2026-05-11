@@ -1,8 +1,25 @@
 # Praxa Render Pipeline — Design Note
 
-**Status:** design proposal, not yet implemented
+**Status:** Phases 1–2 implemented (2026-05-11). Phase 3 (suite re-run + `examples/` refresh) and Phase 4 (clean break in docs + version bump) are still pending.
 **Author:** internal
-**Date:** 2026-05-02 (initial), revised 2026-05-03 after first-survey discovery
+**Date:** 2026-05-02 (initial), revised 2026-05-03 after first-survey discovery, updated 2026-05-11 on implementation.
+
+---
+
+## Implementation notes (2026-05-11)
+
+Shipped:
+- `skills/behavior-verifier/schema.py` — canonical-JSON validator (shape, types, enums, required fields, **and** the cross-field consistency checks that §5.8 assigned to the renderer; the renderer calls it).
+- `skills/behavior-verifier/render.py` — the deterministic renderer (template engine, PICK/REPEAT/scalar substitution, derived-value tables, allow-tag sanitizer, TXT formatter). CLI per §5.1.
+- `skills/behavior-verifier/report_template.html` — three small edits: doc-block updated; the orphan `<!-- PICK:overall_status -->` comment (which had no `END`) removed; the remit-row Finding cell changed from a baked-in `<a>` to a single `{{FINDING_LINK}}` the renderer fills with an anchor or an em dash.
+- `skills/behavior-verifier/SKILL.md` — Steps 9–12 rewritten: Step 9 now synthesizes every prose field (intro band ×2, behavior summary, RAISE rationales ×6, weighted rationale, remit-rule rows, positives, log files); Step 10 writes the single canonical JSON; Step 11 runs `render.py`; Step 12 prints the renderer's `.txt` plus a file pointer.
+- `tests/fixtures/finbot.canonical.json` + `tests/render/test_render.py` — one realistic fixture and a no-dependency smoke harness (19 checks: schema accept, marker-free render, determinism, txt-only, six negative cases).
+
+Deviations from the design as written:
+- **`header.overall_status` dropped from the schema.** §5.7 / Open Q#6 went back and forth; the renderer derives the badge class/label from the highest severity present in `findings[]` (purely formulaic), so storing it in the JSON would only add a redundant consistency check. Decision: renderer-derived, not in JSON.
+- **Rich-text allow-list includes `recommended_action`** (`<code>` only) — the template styles `.rec-text code`, so the skill may emit inline `<code>` there too. (Design §5.6 listed only three fields.)
+- **`{{FINDING_LINK}}` replaces `{{FINDING_ANCHOR}}` / `{{FINDING_ID}}` in the remit row** — cleaner than the design's "leave the cell empty" instruction; the renderer composes the cell HTML (anchor or `&mdash;`).
+- **`LOG_STATUS_LABEL`** is a derived value (`active` → "Active", `new` → "New"); the template's log table needs a label as well as a class.
 
 ---
 

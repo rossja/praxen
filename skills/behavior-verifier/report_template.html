@@ -3,7 +3,10 @@
   Confidential and Proprietary. Do not distribute. Use by permission only.
 
   Canonical HTML template for Praxa analysis reports.
-  Authoring and placeholder conventions are documented in skills/behavior-verifier/SKILL.md Step 11.
+  Rendered deterministically by skills/behavior-verifier/render.py from a Praxa
+  canonical findings JSON. The placeholder catalogue and marker syntax live in
+  render.py (and the schema in skills/behavior-verifier/schema.py) — do not hand-edit
+  the rendered output.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -555,7 +558,6 @@
   <div class="header-right">
     <div class="agent-name">Agent: {{AGENT_NAME}}</div>
     <div class="scan-ts">Analysis: {{SCAN_TIMESTAMP}}</div>
-    <!-- PICK:overall_status — use ONE of: status-critical | status-high | status-advisory | status-clean -->
     <div><span class="status-badge status-{{OVERALL_STATUS_CLASS}}">{{OVERALL_STATUS_LABEL}}</span></div>
   </div>
 </div>
@@ -609,15 +611,15 @@
         </tr>
       </thead>
       <tbody>
-        <!-- REPEAT:remit_row — one row per remit rule (R-01, R-02, ...).
-             Use pill class: pill-verified | pill-gap | pill-partial | pill-vague | pill-enp
-             If no linked finding, leave finding cell empty. -->
+        <!-- REPEAT:remit_row — rendered by render.py, one row per remit rule (R-01, R-02, ...).
+             {{STATUS_PILL_CLASS}}/{{STATUS_LABEL}} are derived from the rule's status;
+             {{FINDING_LINK}} is an anchor to the linked finding, or an em dash if none. -->
         <tr>
           <td><strong>{{RULE_ID}}</strong></td>
           <td>{{REMIT_SECTION}}</td>
           <td class="rule-quote">"{{RULE_TEXT}}"</td>
           <td><span class="status-pill {{STATUS_PILL_CLASS}}">{{STATUS_LABEL}}</span></td>
-          <td><a href="#{{FINDING_ANCHOR}}">{{FINDING_ID}}</a></td>
+          <td>{{FINDING_LINK}}</td>
         </tr>
         <!-- END:remit_row -->
       </tbody>

@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+# Copyright © 2026 Exabeam, Inc. All Rights Reserved.
+# Confidential and Proprietary. Do not distribute. Use by permission only.
+"""Self-contained smoke tests for the Praxa render pipeline (schema.py + render.py).
+
+No pytest dependency — run directly:
+
+    python3 tests/render/test_render.py
+
+Covers:
+  * schema validation accepts a well-formed canonical fixture
+  * render.py produces HTML with zero unsubstituted placeholders / leftover markers
+  * render.py output is byte-deterministic
+  * --out-txt-only mode works
+  * negative cases (legacy bare list, missing field, count mismatch, bad enum,
+    missing RAISE category, broken anchor) all fail loudly with a non-zero exit
+"""
+from __future__ import annotations
+
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+SKILL_DIR = os.path.join(REPO_ROOT, "skills", "behavior-verifier")
+RENDER_PY = os.path.join(SKILL_DIR, "render.py")
+TEMPLATE = os.path.join(SKILL_DIR, "report_template.html")
+FIXTURE = os.path.join(REPO_ROOT, "tests", "fixtures", "finbot.canonical.json")
+
+sys.path.insert(0, SKILL_DIR)
+import schema  # noqa: E402
+
+_passed = 0
+_failed = 0
+
+
+def check(name, cond, detail=""):
+    global _passed, _failed
+    if cond:
+        _passed += 1
+        print(f"  ok   {name}")
+    else:
+        _failed += 1
+        print(f"  FAIL {name}" + (f"  — {detail}" if detail else ""))
+
+
+def run_render(args):
+    return subprocess.run([sys.executable, RENDER_PY, *args],
+                          capture_output=True, text=True)
+
+
+def main():
+    tmp = tempfile.mkdtemp(prefix="praxa_render_test_")
+    data = json.load(open(FIXTURE, encoding="utf-8"))
+
+    # 1. schema accepts the fixture
+    try:
+        schema.validate(data)
+        check("schema.validate accepts the canonical fixture", True)
+    except schema.SchemaError as e:
+        check("schema.validate accepts the canonical fixture", False, str(e))
+
+    # 2. happy-path render
+    out_html = os.path.join(tmp, "a.html")
+    out_txt = os.path.join(tmp, "a.txt")
+    r = run_render(["--findings", FIXTURE, "--template", TEMPLATE,
+                    "--out-html", out_html, "--out-txt", out_txt])
+    check("render exits 0 on the fixture", r.returncode == 0, r.stderr.strip())
+    html = open(out_html, encoding="utf-8").read() if os.path.exists(out_html) else ""
+    txt = open(out_txt, encoding="utf-8").read() if os.path.exists(out_txt) else ""
+    check("HTML has no unsubstituted {{PLACEHOLDER}}",
+          not re.search(r"\{\{[A-Z0-9_]+\}\}", html))
+    check("HTML has no leftover REPEAT/END/PICK/Variant markers",
+          not re.search(r"<!--\s*(REPEAT:|END:|PICK:|Variant [AB]:)", html))
+    check("HTML keeps the copyright comment", "Copyright" in html and "<!--" in html[:400])
+    check("HTML carries the agent name and version", "FinBot" in html and "Praxa v0.1.0" in html)
+    check("HTML footer findings tally matches the fixture",
+          "8 Critical" in html and "6 High" in html and "2 Medium" in html)
+    check("TXT summary is non-empty and names the agent", "FinBot" in txt and len(txt) > 200)
+    check("TXT lists Critical findings", "CRITICAL FINDINGS" in txt)
+
+    # 3. determinism
+    out_html2 = os.path.join(tmp, "b.html")
+    out_txt2 = os.path.join(tmp, "b.txt")
+    run_render(["--findings", FIXTURE, "--template", TEMPLATE,
+                "--out-html", out_html2, "--out-txt", out_txt2])
+    check("HTML render is byte-deterministic",
+          open(out_html, "rb").read() == open(out_html2, "rb").read())
+    check("TXT render is byte-deterministic",
+          open(out_txt, "rb").read() == open(out_txt2, "rb").read())
+
+    # 4. txt-only mode (no template needed)
+    out_txt_only = os.path.join(tmp, "only.txt")
+    r = run_render(["--findings", FIXTURE, "--out-txt", out_txt_only])
+    check("--out-txt without --out-html works", r.returncode == 0 and os.path.exists(out_txt_only))
+
+    # 5. negative cases — each must exit non-zero with a useful message
+    def negative(name, mutate):
+        bad = json.loads(json.dumps(data))
+        path = os.path.join(tmp, "bad.json")
+        if mutate is None:                       # special: write a legacy bare list
+            json.dump([{"id": "x"}], open(path, "w"))
+        else:
+            mutate(bad)
+            json.dump(bad, open(path, "w"))
+        r = run_render(["--findings", path, "--out-txt", os.path.join(tmp, "n.txt")])
+        check(name, r.returncode != 0 and bool(r.stderr.strip()),
+              f"rc={r.returncode} stderr={r.stderr.strip()!r}")
+
+    negative("rejects a legacy bare-list findings file", None)
+    negative("rejects a missing required field (behavior_summary)",
+             lambda d: d.pop("behavior_summary"))
+    negative("rejects a footer/severity count mismatch",
+             lambda d: d["footer"]["severity_counts"].__setitem__("critical", 99))
+    negative("rejects a bad severity enum",
+             lambda d: d["findings"][0].__setitem__("severity", "Sorta Bad"))
+    negative("rejects a remit anchor pointing at a nonexistent finding",
+             lambda d: d["remit_coverage"]["rules"][0].__setitem__("finding_id", "PRAX-9999-99-99-999"))
+    negative("rejects fewer than six RAISE categories",
+             lambda d: d["raise_posture"]["categories"].pop())
+    negative("rejects a weighted_overall that doesn't match the category sum",
+             lambda d: d["raise_posture"].__setitem__("weighted_overall", 4.99))
+
+    print(f"\n{_passed} passed, {_failed} failed")
+    return 1 if _failed else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

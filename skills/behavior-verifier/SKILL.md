@@ -74,21 +74,22 @@ If they want to create one, read `WORKER_REMIT_template.md` from the same direct
 
 If Praxa was invoked non-interactively (e.g., `claude -p`) and (1) does not apply, halt with a clear error rather than stalling on a prompt that will never be answered.
 
-**Agent name.** Same priority: invocation message > infer from workspace directory name > ask. If the name contains spaces or capitals, compute a slug: lowercase, replace whitespace and punctuation with hyphens, strip anything not `[a-z0-9-]`. This slug is used in output filenames.
+**Agent name.** Same priority: invocation message > infer from workspace directory name > ask. If the name contains spaces or capitals, compute a slug: lowercase, replace whitespace and punctuation with hyphens, strip anything not `[a-z0-9-]`. This slug is used in output filenames and in the `scan.agent_slug` field of the findings JSON.
 
 **Output directory.** Use `./reports/` relative to the current working directory. Create it if it doesn't exist:
 ```bash
 mkdir -p ./reports
 ```
 
-**Authoritative date and time.** Use `date -u` as the single source of truth for every date and timestamp in this scan — finding IDs, filenames, report header, finding `timestamp` fields, footer metadata. Do not infer the date from conversation context, memory files, prior scan artifacts, or any other source. If `date -u` is unavailable, ask the operator for the current UTC date before proceeding.
+**Authoritative date and time.** Use `date -u` as the single source of truth for every date and timestamp in this scan — finding IDs, filenames, report header, the `scan.scan_date` / `scan.scan_timestamp` fields, footer metadata. Do not infer the date from conversation context, memory files, prior scan artifacts, or any other source. If `date -u` is unavailable, ask the operator for the current UTC date before proceeding.
 
 ```bash
-SCAN_DATE=$(date -u +%Y-%m-%d)       # e.g., 2026-04-23 — used in finding IDs and findings-<date>.json
-TIMESTAMP=$(date -u +%Y-%m-%d-%H%M%S) # e.g., 2026-04-23-143022 — used in analysis-<timestamp>.html / .txt
+SCAN_DATE=$(date -u +%Y-%m-%d)        # e.g., 2026-04-23 — used in finding IDs and findings-<date>.json
+SCAN_TS=$(date -u +%Y-%m-%dT%H:%M:%SZ) # e.g., 2026-04-23T14:30:22Z — used in the JSON scan_timestamp field
+TIMESTAMP=$(date -u +%Y-%m-%d-%H%M%S)  # e.g., 2026-04-23-143022 — used in analysis-<timestamp>.html / .txt
 ```
 
-Reuse `$SCAN_DATE` and `$TIMESTAMP` throughout the scan; do not regenerate them mid-run.
+Reuse `$SCAN_DATE`, `$SCAN_TS`, and `$TIMESTAMP` throughout the scan; do not regenerate them mid-run.
 
 ---
 
@@ -169,6 +170,8 @@ When reading a truncated file, append `[truncated — first N + last N of X line
 
 Read each file you find, applying this strategy. Do not skip a file because its name looks benign — credential exposure is often found in documentation, snapshots, and files named `example*` or `old*`.
 
+Keep a running count of the artifacts you actually read — you will record it as `scan.artifact_count` in Step 10.
+
 **Empty-file signal — a specific high-value case.**
 
 A file that exists but is 0 lines (or a stub with only a docstring / single `pass`) in a security-relevant module is almost always a **planned-but-not-implemented control**. Treat every such file as a discovery event, not a nothing-to-see-here.
@@ -188,7 +191,7 @@ Sweep the workspace for files that appear to be logs. Identify them by:
 - Name pattern: `*log*`, `*audit*`, `*session*`, `*trace*`, `*events*`, `*history*`
 - Content structure: repeated timestamped entries, JSON lines format, append-only patterns
 
-For each discovered log file, record: full path, apparent source, content type, apparent purpose, and last modified timestamp.
+For each discovered log file, record: full path, apparent source, content type, apparent purpose, and last modified timestamp. You will serialize this list in Step 9.8.
 
 ---
 
@@ -264,6 +267,8 @@ Score each category 0–5 with a confidence level (High / Medium / Low). Score w
 
 **Monitor Continuously** — Does the agent log its actions? Are logs structured enough to support automated detection? Look for: no logging calls in skill code, free-form log format with no schema, log files present but capturing only errors (not actions and decisions).
 
+Hold the six scores, confidences, and the evidence behind each — you will write the per-category rationale prose in Step 9.4.
+
 ---
 
 ## Step 6 — Apply Named Detection Patterns
@@ -293,7 +298,7 @@ Also extract any clause containing: MUST, MUST NOT, NEVER, ALWAYS, REQUIRED, PRO
 Assign each extracted rule a short ID: R-01, R-02, etc. Record:
 - Rule ID
 - Section it came from
-- Exact quoted text (verbatim from the remit)
+- Exact quoted text (verbatim from the remit — trim a long clause to its operative sentence)
 - Rule type: Behavioral (about what the agent does) or Structural (about what controls must exist)
 
 Hold this inventory in working memory. You will account for every rule.
@@ -302,13 +307,13 @@ Hold this inventory in working memory. You will account for every rule.
 
 For each rule in the inventory, find the corresponding implementation in the agent's code and classify it:
 
-| Status | Meaning |
-|--------|---------|
-| **Verified** | Rule is specific; matching control found in code with a citable location |
-| **Gap** | Rule is specific; no corresponding control found in code |
-| **Partial** | Rule is specific; implementation exists but is incomplete or bypassable |
-| **Vague Policy** | Rule intent is clear but too imprecise to verify in code (needs rewrite) |
-| **Enforcement Not Possible** | Rule is behavioral/cultural; cannot be verified in code |
+| Status | JSON value | Meaning |
+|--------|-----------|---------|
+| **Verified** | `verified` | Rule is specific; matching control found in code with a citable location |
+| **Gap** | `gap` | Rule is specific; no corresponding control found in code |
+| **Partial** | `partial` | Rule is specific; implementation exists but is incomplete or bypassable |
+| **Vague Policy** | `vague` | Rule intent is clear but too imprecise to verify in code (needs rewrite) |
+| **Enforcement Not Possible** | `enp` | Rule is behavioral/cultural; cannot be verified at the layer Praxa can see |
 
 Severity for each status:
 - **Gap** on a Forbidden Action or Approval Requirement: **Critical** finding
@@ -316,9 +321,9 @@ Severity for each status:
 - **Partial**: **High** finding — describe exactly what's missing
 - **Vague Policy**: **Medium** finding — the operator needs to make this rule specific enough to enforce
 
-For every finding, populate `policy_reference` with the exact quoted rule text. The finding must be traceable back to the specific sentence in the remit.
+For every finding, capture the exact quoted rule text — the finding must be traceable back to the specific sentence in the remit.
 
-Hold the complete audit results (all rules, all statuses, all linked finding IDs) in working memory — you will render this as the Remit Coverage section in the HTML report.
+Hold the complete audit results (every rule, every status, every linked finding ID) in working memory — you will serialize this as `remit_coverage.rules[]` in Step 9.6.
 
 ### Credential Exposure
 
@@ -405,7 +410,7 @@ When a compound pattern matches:
 
 ## Step 8 — Positive Posture Recognition
 
-For each of the following, check whether the evidence supports it. Include confirmed positives in the report.
+For each of the following, check whether the evidence supports it. Include confirmed positives in the report (you will serialize them in Step 9.7).
 
 | Positive signal | Check |
 |----------------|-------|
@@ -419,42 +424,30 @@ For each of the following, check whether the evidence supports it. Include confi
 
 ---
 
-## Step 9 — Synthesize the Scan Overview
+## Step 9 — Synthesize the Report Prose
 
-The scan overview has four parts that render at the top of the report: an **Agent Remit** summary (what the operator declared), an **Agent Structure** summary (what you observed in the workspace), a **Scan Summary** narrative (the dominant finding pattern), and the per-category **RAISE Scorecard**.
+Praxa produces three artifacts per analysis: a canonical findings JSON (Step 10), and — rendered deterministically from that JSON by `render.py` (Step 11) — an HTML report and a plain-text summary. **The renderer does no synthesis and fills no gaps.** Every piece of prose the report displays must be written here. Anything you skip will be missing from both the HTML and the JSON.
 
-### Agent Remit summary (intro band — left block)
+Synthesize the following now, in order, and hold it all in working memory. You will write it out as one JSON file in Step 10.
 
-Two to four sentences describing **what the remit says the agent is for**. This is a faithful restatement of the operator's declared intent — not analysis, not critique. Cover:
+### 9.1 Agent Remit summary (intro band — left block) → `intro_band.agent_remit_summary`
 
-- The agent's stated purpose and role (one sentence).
-- Its authorized tools or capability categories (one sentence, listed in prose).
-- Its authorized counterparties and data scope (one sentence).
-- Any standout forbidden actions or approval requirements that define its shape (optional fourth sentence).
+Two to four sentences describing **what the remit says the agent is for** — a faithful restatement of declared intent, not analysis. Cover: the agent's stated purpose and role; its authorized tools or capability categories (in prose, not a list); its authorized counterparties and data scope; optionally, a standout forbidden action or approval requirement that defines its shape. Plain prose, no lists, no headings. You may use `<code>` tags for literal tool names or identifiers.
 
-Write in plain prose, not bullets. The reader should be able to picture the agent's intended function from these sentences alone. Use `<code>` tags for literal tool names or identifiers.
+*Example:* "A natural-language interface to a relational database, intended to answer read-only analytical questions for internal data consumers. The agent may use `sql_db_list_tables`, `sql_db_schema`, `sql_db_query_checker`, and `sql_db_query` against a pre-configured SQLAlchemy connection. DML and DDL statements are explicitly forbidden — they are out of scope entirely, with no approval path."
 
-*Example:* "A natural-language interface to a relational database, intended to answer read-only analytical questions for internal data consumers. The agent may use `sql_db_list_tables`, `sql_db_schema`, `sql_db_query_checker`, and `sql_db_query` against a pre-configured SQLAlchemy connection. DML and DDL statements are explicitly forbidden and require no approval path — they are out of scope entirely."
+### 9.2 Agent Structure summary (intro band — right block) → `intro_band.agent_structure_summary`
 
-### Agent Structure summary (intro band — right block)
+Two to four sentences describing **what you actually found in the workspace** — the as-built picture. Cover: the tech stack and primary framework; the agent's code-level shape (orchestration pattern — single agent / multi-agent / executor pair —, tool implementations discovered, system-prompt location, config-file locations); any notable external surface (admin API, HTTP endpoints, file I/O, subprocess execution, DB connections); and, neutrally, any material divergence from what the remit implies (detailed analysis goes in findings). Concrete and technical — a reader should know where to start if they opened the workspace. You may use `<code>` for filenames and function names. No lists, no headings.
 
-Two to four sentences describing **what you actually found in the workspace**. This is observational — the as-built picture. Cover:
+*Example:* "Python Flask application with a SQLAlchemy-backed SQLite database. A single `FinBotAgent` class in `src/services/finbot_agent.py` orchestrates OpenAI function-calling with five tools and two model paths (LLM and a fallback rule engine). Admin routes are exposed via a Flask blueprint at `/admin/*` with no authentication middleware. Invoice descriptions and vendor-submitted content flow into the LLM context through `process_invoice()`."
 
-- The tech stack and primary framework (Python/Flask, Node/Express, LangChain, OpenAI Agents SDK, AutoGen, etc.).
-- The agent's code-level shape: orchestration pattern (single agent / multi-agent / executor pair), tool implementations discovered, system prompt location, config file locations.
-- Any notable external surface (admin API, HTTP endpoints, file I/O, subprocess execution, database connections).
-- If the code differs materially from what the remit implies, note it neutrally here (detailed analysis goes in findings).
-
-Keep it concrete and technical — a reader should know where to start looking if they opened the workspace themselves. Use `<code>` for filenames and function names when they aid clarity.
-
-*Example:* "Python Flask application with a SQLAlchemy-backed SQLite database. A single `FinBotAgent` class in `src/services/finbot_agent.py` orchestrates OpenAI function-calling with five tools and two model paths (LLM and fallback business logic). Admin routes are exposed via a Flask blueprint at `/admin/*` with no authentication middleware. Invoice descriptions and vendor-submitted content flow into the LLM context through `process_invoice()`."
-
-### Scan Summary (narrative — separate section below the scorecard's intro)
+### 9.3 Behavior Summary narrative → `behavior_summary`
 
 Write **two to four sentences** that name the single most important pattern a security lead should take away from this scan. This is editorial synthesis across all findings — not a restatement of severity counts or category scores.
 
 **What this narrative must do:**
-- Name the dominant pattern in plain language. Examples of patterns that recur in real scans:
+- Name the dominant pattern in plain language. Patterns that recur in real scans:
   - *Framework offers safe primitives, code/example uses none of them.* (E.g., guardrail classes exist; no guardrails wired in.)
   - *Policy declared in prompt or docs, zero code-level enforcement.* (E.g., prompt forbids DML; no SQL parser.)
   - *Sandbox has the shape of isolation but not the substance.* (E.g., container hardening flags defaulted off; fallback path downgrades silently.)
@@ -470,33 +463,52 @@ Write **two to four sentences** that name the single most important pattern a se
 - Summarize findings one by one — the Findings Register does that.
 - Speculate about intent or blame — report patterns, not motives.
 
-Hold the finished narrative in working memory. It goes into the interim stdout print below, the HTML `{{SCAN_SUMMARY_NARRATIVE}}` placeholder in Step 11, and the final `.txt` summary in Step 12.
+The renderer wraps this in a `.body` div that styles `<p>` paragraph breaks and inline `<code>`. If the narrative is more than one paragraph, wrap each in `<p>...</p>`. A single paragraph can be plain text.
 
-### RAISE Scorecard
+### 9.4 RAISE per-category rationale ×6 → `raise_posture.categories[].rationale`
 
-Produce a scorecard with this structure for each category:
+For each of the six RAISE categories — in this fixed order: **Limit Your Domain, Balance Your Knowledge Base, Implement Zero Trust, Manage Your Supply Chain, Build an AI Red Team, Monitor Continuously** — record the score (0–5) and confidence (High/Medium/Low) you arrived at in Step 5, plus a **rationale of one to two sentences** naming the specific evidence (or observed absence) behind the score: which file, which control, which gap. Concrete, not generic.
 
-```
-Category: Implement Zero Trust
-Score: 2 / 5
-Confidence: Medium
-Summary: Input validation is absent from the primary skill file. External email content
-         enters the LLM context without sanitization. Exec capability is present with no
-         documented approval policy.
-Key findings: PRAX-2026-04-12-003, PRAX-2026-04-12-007
-```
+*Example rationale (Implement Zero Trust, score 0):* "No code-level interposition exists on the agent's tool calls — `approve_invoice` writes `payment_processed=True` with no check on amount, fraud signal, or caller identity, and the only stated guardrails live in an LLM system prompt that an unauthenticated endpoint can overwrite at runtime."
 
-### Print an interim overview to stdout now
+### 9.5 Weighted-overall rationale → `raise_posture.weighted_overall` + `raise_posture.weighted_rationale`
 
-Before you start writing files (Steps 10–11 are the heaviest part of the scan and the point where long sessions hit context pressure), print a short interim overview to stdout so the operator sees the synthesis and scorecard even if the session is truncated before Step 12:
+Compute the weighted overall: Σ(score × weight) across the six categories, where **Implement Zero Trust has weight 0.25** and the other five have **weight 0.15** each. Round to two decimals. Then write a 2–4 sentence rationale that explains what the number means in posture terms (not the arithmetic) — what the agent does and doesn't have across the framework. Open with the maturity label for `floor(weighted_overall)`:
+
+| `floor(weighted_overall)` | Maturity label |
+|---|---|
+| 0 | Absent |
+| 1 | Ad hoc |
+| 2 | Partial |
+| 3 | Established |
+| 4 | Strong |
+| 5 | Exemplary |
+
+(The renderer derives and displays the label itself; lead with it in the prose so the rationale reads coherently.)
+
+### 9.6 Remit Coverage rule audit → `remit_coverage.rules[]` + `remit_coverage.stat_counts`
+
+Serialize the Policy-Implementation Divergence audit you completed in Step 6 (Phase 1 + Phase 2). For each rule, in document order: `rule_id` (`R-NN`), `section` (the remit section heading it came from), `rule_text` (the exact quoted text — short; the operative clause), `status` (`verified` | `gap` | `partial` | `vague` | `enp`), and `finding_id` (the `PRAX-...` id of the finding documenting this gap, or `null` for `verified` / `vague` / `enp` rules — every `gap` should normally point at one). Then count the statuses into `stat_counts` (the counts must match the rows, and `total` must equal the number of rows).
+
+### 9.7 Positives → `positives[]`
+
+For each confirmed positive from Step 8: a `title` (short), a `description` (one or two sentences — what the control is and why it counts), and an `evidence_path` (file:line or config key). If you found none, the list is empty — the renderer prints the standard "no confirmed positive controls" line.
+
+### 9.8 Discovered log files → `log_files`
+
+If you found log files in Step 4: set `present` to true and, for each, record `path`, `source` (the component that writes it), `content_type` (e.g., "structured JSON lines", "plaintext", "agent decision log"), `purpose` (what it captures), `mtime` (last-modified as you observed it — a date or `"unknown"`), and `status` (`active` if recently written, `new` if it looks freshly created this run). If you found none: set `present` to false, leave `rows` empty, and write a one-sentence `no_logs_note` — and if the absence of logging is itself a finding (it usually is for Monitor Continuously), say so and cite the finding ID.
+
+### 9.9 Print an interim overview to stdout now
+
+Before writing any files, print a short interim overview so the operator sees the synthesis even if the session is truncated before the final summary:
 
 ```
 Praxa — interim behavior analysis overview
 Agent:    [agent name]
 Artifacts read: [count]
 
-Scan Summary:
-  [the 2–4 sentence narrative from above, wrapped to readable width]
+Behavior Summary:
+  [the 2–4 sentence narrative from 9.3, wrapped to readable width]
 
 RAISE Posture:
   Limit Your Domain          [score]/5
@@ -509,242 +521,146 @@ RAISE Posture:
 Weighted Overall: [score] / 5.0
 Findings so far: [N Critical] [N High] [N Medium] [N Low] [N Informational]
 
-Assembling full findings and HTML report...
+Writing the findings JSON and rendering the report...
 ```
-
-This is a partial output — Step 12 will print the final summary once all files are written.
 
 ---
 
-## Step 10 — Assemble Findings
+## Step 10 — Write the Canonical Findings JSON
 
-Generate a unique ID for each finding using the format: `PRAX-YYYY-MM-DD-NNN` (today's date, zero-padded sequence starting at 001).
+Write a single JSON file — the canonical record of this analysis — to:
 
-Use this schema for every finding:
-
-```json
-{
-  "id": "PRAX-2026-04-12-001",
-  "timestamp": "<ISO 8601 UTC>",
-  "source": "scanner",
-  "detector_id": "<snake_case detector name>",
-  "raise_category": "<one of: limit_your_domain | balance_your_knowledge_base | implement_zero_trust | manage_your_supply_chain | build_an_ai_red_team | monitor_continuously>",
-  "owasp_llm": "<LLM01–LLM10 or null>",
-  "owasp_agentic": "<ASI01–ASI10 or null>",
-  "severity": "<Critical | High | Medium | Low | Informational>",
-  "confidence": "<High | Medium | Low>",
-  "worker": "<agent name>",
-  "summary": "One sentence. Specific. Not generic.",
-  "evidence": [
-    "Exact file path and line or pattern observed"
-  ],
-  "policy_reference": [
-    "WORKER_REMIT.md → <Section>: \"<exact quoted rule text>\""
-  ],
-  "posture_score": null,
-  "related_findings": [],
-  "recommended_action": "Specific action. File to edit, config to change, control to add.",
-  "escalation": "<alert | log_only>"
-}
+```
+./reports/<agent-slug>-findings-<YYYY-MM-DD>.json
 ```
 
-Notes:
-- `escalation` is `alert` for Critical and High findings, `log_only` for Medium, Low, Informational.
-- Evidence must be specific — file path, line number, pattern observed. "No input validation found" is not evidence.
-- `policy_reference` is required on any finding that relates to a remit rule. Use exact quoted text, not just a section name.
+(Use the agent slug and `$SCAN_DATE` from Step 1; do not regenerate the date.)
 
-### Posture summary entry
-
-In addition to the individual findings, include exactly one **posture summary entry** as the first item in the findings array. Its `id` ends in `-POSTURE`; it carries the weighted overall score and per-category breakdown for machine consumption. Use this exact shape:
+This file is the **complete behavioral record**: everything the HTML report shows is derived from it by `render.py`, and it is also what downstream consumers (dashboards, ticketing, compliance pipelines) ingest. Use exactly this shape. Every field is required unless the comment says it may be null or empty:
 
 ```json
 {
-  "id": "PRAX-YYYY-MM-DD-POSTURE",
-  "timestamp": "<ISO 8601 UTC>",
-  "source": "scanner",
-  "detector_id": "raise_posture_summary",
-  "severity": "Informational",
-  "confidence": "High",
-  "worker": "<agent name>",
-  "summary": "RAISE posture summary for this scan.",
-  "scan_summary": "The 2–4 sentence narrative from Step 9. Carries the dominant finding pattern so downstream systems can surface it without parsing the HTML.",
-  "posture_score": {
-    "weighted_overall": 1.3,
-    "categories": {
-      "limit_your_domain":         { "score": 2, "confidence": "High",   "weight": 0.15 },
-      "balance_your_knowledge_base":{ "score": 1, "confidence": "High",   "weight": 0.15 },
-      "implement_zero_trust":      { "score": 0, "confidence": "High",   "weight": 0.25 },
-      "manage_your_supply_chain":  { "score": 2, "confidence": "Medium", "weight": 0.15 },
-      "build_an_ai_red_team":      { "score": 1, "confidence": "High",   "weight": 0.15 },
-      "monitor_continuously":      { "score": 1, "confidence": "High",   "weight": 0.15 }
-    }
+  "schema_version": "1.0",
+  "praxa_version": "<the version in .claude-plugin/plugin.json, e.g. 0.1.0>",
+  "scan": {
+    "agent": "<agent name>",
+    "agent_slug": "<agent-slug>",
+    "scan_date": "<$SCAN_DATE, YYYY-MM-DD>",
+    "scan_timestamp": "<$SCAN_TS, ISO 8601 UTC, e.g. 2026-05-03T04:39:06Z>",
+    "workspace": "<absolute path to the agent workspace>",
+    "artifact_count": <integer — number of workspace artifacts you read in Step 4>
   },
-  "raise_category": null,
-  "owasp_llm": null,
-  "owasp_agentic": null,
-  "evidence": [],
-  "policy_reference": [],
-  "related_findings": [],
-  "recommended_action": "See individual findings for specific remediations.",
-  "escalation": "log_only"
+  "intro_band": {
+    "agent_remit_summary": "<9.1 — 2-4 sentences; may contain <code> tags>",
+    "agent_structure_summary": "<9.2 — 2-4 sentences; may contain <code> tags>"
+  },
+  "behavior_summary": "<9.3 — 2-4 sentence dominant-pattern narrative; may contain <p> and <code> tags>",
+  "remit_coverage": {
+    "stat_counts": { "verified": <int>, "gap": <int>, "partial": <int>, "vague": <int>, "enp": <int>, "total": <int — must equal the number of rules below> },
+    "rules": [
+      { "rule_id": "R-01", "section": "<remit section heading>", "rule_text": "<exact quoted rule text>", "status": "<verified | gap | partial | vague | enp>", "finding_id": "<PRAX-... or null>" }
+    ]
+  },
+  "findings": [
+    {
+      "id": "PRAX-YYYY-MM-DD-001",
+      "severity": "<Critical | High | Medium | Low | Informational>",
+      "summary": "<one sentence, specific — not generic>",
+      "tags": [
+        { "kind": "raise", "label": "<RAISE category display name, e.g. Implement Zero Trust>" },
+        { "kind": "owasp_llm", "label": "LLM01 — Prompt Injection" },
+        { "kind": "owasp_agentic", "label": "ASI01 — Agent Goal Hijack" }
+      ],
+      "policy_rule_ids": "<the R-NN id(s) this finding violates, e.g. \"R-03\" or \"R-03, R-04\">",
+      "policy_rule_text": "<the exact quoted remit text the finding violates; if it spans rules, concatenate with \" / \">",
+      "evidence": ["<file:line — exact observation>", "<...>"],
+      "recommended_action": "<specific action: file to edit, config to change, control to add; may contain <code> tags>",
+      "raise_category": "<one of: limit_your_domain | balance_your_knowledge_base | implement_zero_trust | manage_your_supply_chain | build_an_ai_red_team | monitor_continuously>",
+      "owasp_llm": "<LLM01–LLM10, or null>",
+      "owasp_agentic": "<ASI01–ASI10, or null>",
+      "confidence": "<High | Medium | Low>",
+      "related_findings": ["<PRAX-... ids of related findings, or empty list>"],
+      "escalation": "<alert for Critical/High; log_only for Medium/Low/Informational>"
+    }
+  ],
+  "positives": [
+    { "title": "<short>", "description": "<1-2 sentences>", "evidence_path": "<file:line or config key>" }
+  ],
+  "log_files": {
+    "present": <true | false>,
+    "no_logs_note": "<one sentence on the absence (cite a finding ID if relevant) when present is false; may be empty string when present is true>",
+    "rows": [
+      { "path": "<path>", "source": "<component>", "content_type": "<...>", "purpose": "<...>", "mtime": "<date or 'unknown'>", "status": "<active | new>" }
+    ]
+  },
+  "raise_posture": {
+    "weighted_overall": <float, 2 decimals, = Σ(score × weight)>,
+    "weighted_rationale": "<9.5 — 2-4 sentences>",
+    "categories": [
+      { "key": "limit_your_domain",          "name": "Limit Your Domain",          "score": <0-5>, "confidence": "<High|Medium|Low>", "weight": 0.15, "rationale": "<9.4 — 1-2 sentences>" },
+      { "key": "balance_your_knowledge_base", "name": "Balance Your Knowledge Base", "score": <0-5>, "confidence": "<...>", "weight": 0.15, "rationale": "<...>" },
+      { "key": "implement_zero_trust",        "name": "Implement Zero Trust",        "score": <0-5>, "confidence": "<...>", "weight": 0.25, "rationale": "<...>" },
+      { "key": "manage_your_supply_chain",    "name": "Manage Your Supply Chain",    "score": <0-5>, "confidence": "<...>", "weight": 0.15, "rationale": "<...>" },
+      { "key": "build_an_ai_red_team",        "name": "Build an AI Red Team",        "score": <0-5>, "confidence": "<...>", "weight": 0.15, "rationale": "<...>" },
+      { "key": "monitor_continuously",        "name": "Monitor Continuously",        "score": <0-5>, "confidence": "<...>", "weight": 0.15, "rationale": "<...>" }
+    ]
+  },
+  "footer": {
+    "severity_counts": { "critical": <int>, "high": <int>, "medium": <int>, "low": <int>, "info": <int> }
+  }
 }
 ```
 
-All other (non-summary) findings have `"posture_score": null`.
+Rules for the findings array and the JSON as a whole:
 
-Write all findings — posture entry first, then per-severity order — to `./reports/<agent-slug>-findings-<YYYY-MM-DD>.json`.
+- **Finding IDs** are `PRAX-YYYY-MM-DD-NNN` (today's date, zero-padded sequence from `001`). They double as the HTML anchors — keep them unique. Order the array Critical → High → Medium → Low → Informational, and by ID within a severity (the renderer re-sorts by severity, but writing it in order keeps the JSON readable).
+- **`evidence` must be specific** — a file path with a line or pattern, or an explicit observed absence. "No input validation found" is not evidence; "`src/agent.py:34` — `fetch_message()` returns the full body before the trust check at `:67`" is. Every finding needs at least one evidence item. Never reprint a secret value (see the rule at the top of this skill).
+- **`tags`** always includes the RAISE category as `{ "kind": "raise", "label": "<display name>" }`. Add `{ "kind": "owasp_llm", "label": "..." }` whenever `owasp_llm` is non-null and `{ "kind": "owasp_agentic", "label": "..." }` whenever `owasp_agentic` is non-null. Tag labels carry the **full** name, never just the code — `LLM01 — Prompt Injection`, not `LLM01`; `ASI05 — Cascading & Multi-Agent Failures`, not `ASI05`. Use the canonical names from `knowledge/KB_LLM_TOP10.md` and `knowledge/KB_AGENTIC_TOP10.md`. For an MCP-specific finding, add `{ "kind": "mcp", "label": "<the MCP checklist item>" }`.
+- **`escalation`** is `alert` for Critical and High findings, `log_only` for Medium, Low, and Informational.
+- **Counts must be consistent.** `footer.severity_counts` must match the actual severities in `findings[]`. `remit_coverage.stat_counts` must match the actual statuses in `rules[]`, and `total` must equal `len(rules)`. Every non-null `rule.finding_id` must exist in `findings[]`. `weighted_overall` must equal Σ(score × weight) within rounding. **The renderer re-checks all of this and refuses to run if it's off**, naming the offending path — so get it right here.
+- **`findings`** may be empty (a genuinely clean agent). `positives` may be empty. `log_files.rows` is empty exactly when `present` is false.
+- **No presentation values in the JSON.** `severity` is `"Critical"`, never `"sev-critical"`; `status` is `"gap"`, never `"pill-gap"`; do not put CSS classes, percentages, or `floor()`ed maturity labels anywhere. The renderer derives all of that.
+
+After writing the file, re-read it and confirm it parses as valid JSON and the counts line up. (Step 11 will catch any problem, but catching it here saves a round trip.)
 
 ---
 
-## Step 11 — Write the HTML Report
+## Step 11 — Render the Report
 
-Determine the report filename using the `$TIMESTAMP` and `$AGENT_SLUG` variables established in Step 1 (do not regenerate the timestamp here — reuse the same one across the `.html`, `.json`, and `.txt` outputs):
+The renderer turns the canonical JSON into the HTML report and the plain-text summary. It ships beside this skill file as `render.py` (with its validator, `schema.py`) — pure Python 3 stdlib, deterministic, no synthesis. Run it from the current working directory:
 
 ```bash
-REPORT_FILE=./reports/${AGENT_SLUG}-analysis-${TIMESTAMP}.html
+python3 "<SKILL_DIR>/render.py" \
+  --findings  ./reports/<agent-slug>-findings-<YYYY-MM-DD>.json \
+  --template  "<SKILL_DIR>/report_template.html" \
+  --out-html  ./reports/<agent-slug>-analysis-<TIMESTAMP>.html \
+  --out-txt   ./reports/<agent-slug>-analysis-<TIMESTAMP>.txt
 ```
 
-**Use the canonical template. Do not redesign the report.**
+`<SKILL_DIR>` is the absolute path of the directory that contains this `SKILL.md` (the same directory you read `report_template.html` and `knowledge/` from). Use the agent slug, `$SCAN_DATE`, and `$TIMESTAMP` from Step 1 so the three files share a base name. If `python3` is not on the path, try `python`.
 
-Read `report_template.html` from the same directory as this skill file. Copy it verbatim to `$REPORT_FILE`, then substitute the data placeholders with analysis results.
+The renderer guarantees: zero unsubstituted placeholders, zero leftover template markers, footer/remit counts that match the findings data, finding anchors that resolve, the fixed RAISE category order, and byte-identical output for the same input. It exits `0` on success and prints the paths it wrote.
 
-### Template structure
-
-The template file contains only two things: a leading copyright comment (~5 lines) and the full HTML report body starting at `<!DOCTYPE html>`. Preserve the copyright comment verbatim — do not delete it.
-
-### Placeholder and block conventions
-
-The template uses three markup conventions. Learn them once; they appear throughout the template.
-
-| Convention | What to do |
-|---|---|
-| `{{SCALAR}}` | Replace with a single value. |
-| `<!-- REPEAT:name ... END:name -->` | Block template for repeatable elements (one per RAISE card, remit row, finding, positive, log row). Clone once per item, substitute inner placeholders, then delete the `REPEAT:` / `END:` comment markers. |
-| `<!-- PICK:name ... END:name -->` | Mutually exclusive variants. Keep one, delete the others and the marker comments. |
-
-### Rules for filling the template
-
-1. **Copy the template exactly.** Do not change the CSS, colors, fonts, structure, or section order. Report consistency across scans is a hard requirement. The brand and style are already baked in — do not make design decisions.
-
-2. **Substitute scalar, REPEAT, and PICK markers** per the conventions above. Every `{{PLACEHOLDER}}`, every `REPEAT:` block, and every `PICK:` block must be resolved before writing the final output.
-
-3. **Choose the correct CSS class** per the template's inline guidance:
-   - Overall status: `status-critical` (any Critical finding) | `status-high` (High but no Critical) | `status-advisory` (Medium only) | `status-clean` (no findings above Informational)
-   - RAISE score cell: `score-0-1` | `score-2` | `score-3` | `score-4-5`
-   - Remit status pill: `pill-verified` | `pill-gap` | `pill-partial` | `pill-vague` | `pill-enp` (Enforcement Not Possible)
-   - Severity badge: `sev-critical` | `sev-high` | `sev-medium` | `sev-low` | `sev-info`
-   - Finding tag: `tag-raise` (RAISE category) | `tag-owasp` (LLM0X) | `tag-agentic` (ASI0X)
-   - Log status: `log-status-active` | `log-status-new`
-
-4. **Section order in the report is fixed and intentional.** Do not reorder, merge, or relocate sections. The flow walks the reader from specifics to verdict:
-   1. Header bar (identity + findings-severity status badge)
-   2. Intro band (Agent Remit + Agent Structure summaries)
-   3. Scan Summary (dominant finding pattern)
-   4. Remit Coverage (policy audit)
-   5. Findings Register (detailed findings)
-   6. What's Working Well (verified positives)
-   7. Discovered Log Files
-   8. **RAISE Maturity Posture** — at the end. This is the wrap-up, not the headline. After the reader has seen the individual findings, the maturity score lands as a summary verdict rather than a headline that biases interpretation.
-   9. Footer
-
-5. **Ordering within sections.**
-   - RAISE category cards: fixed order — Limit Your Domain, Balance Your Knowledge Base, Implement Zero Trust, Manage Your Supply Chain, Build an AI Red Team, Monitor Continuously.
-   - Remit rows: by rule ID (R-01, R-02, …).
-   - Findings: Critical first, then High, Medium, Low, Informational. Within a severity, by finding ID.
-
-6. **Maturity label placeholder.** `{{MATURITY_LABEL}}` in the RAISE hero band takes the maturity label corresponding to the weighted score — not a generic status. Map `floor(weighted_score)` to the label:
-   - 0.0–0.99 → `Absent`
-   - 1.0–1.99 → `Ad hoc`
-   - 2.0–2.99 → `Partial`
-   - 3.0–3.99 → `Established`
-   - 4.0–4.99 → `Strong`
-   - 5.0      → `Exemplary`
-
-   For scores near a boundary (e.g., 2.9), render as the lower label with a transition note: `Partial → Established`. Use the two-label form only when the score is within 0.2 of the next threshold.
-
-7. **Finding anchors must match.** The `id` attribute on each `.finding-card` (e.g., `id="PRAX-2026-04-21-001"`) must match the anchor href used in the Remit Coverage table (`<a href="#PRAX-2026-04-21-001">`). Multiple remit rows may link to the same finding — one finding can remediate several rules.
-
-8. **Empty-finding remit rows.** Rules with status Verified or Enforcement Not Possible have no linked finding. Render the Finding cell as empty: `<td></td>`. Do not emit an empty `<a>` tag.
-
-9. **Behavior Summary narrative.** `{{SCAN_SUMMARY_NARRATIVE}}` takes the narrative from Step 9. The wrapping `.body` supports paragraph breaks — if the narrative is more than one paragraph, wrap each in `<p>...</p>` tags. A single-paragraph narrative can be plain text with no tags.
-
-10. **Intro band summaries.** `{{AGENT_REMIT_SUMMARY}}` and `{{AGENT_STRUCTURE_SUMMARY}}` take the two short narratives from Step 9. Each is plain prose (2–4 sentences), may include `<code>` tags for filenames or identifiers, but should not contain lists or headings.
-
-11. **OWASP tags must render with the full category name, not just the code.** Finding tag classes `tag-owasp` (LLM0X) and `tag-agentic` (ASI0X) must always show the full name so readers unfamiliar with the shorthand can understand the tag. Use the canonical names from `knowledge/KB_LLM_TOP10.md` and `knowledge/KB_AGENTIC_TOP10.md`.
-
-12. **`{{PRAXA_VERSION}}` is a required placeholder.** Substitute the current Praxa version (matching the `version` in `.claude-plugin/plugin.json`, e.g., `0.1.0`) into the report footer's `Praxa v{{PRAXA_VERSION}}` line. This must be filled like any other scalar placeholder.
-
-   - ✓ `<span class="tag tag-owasp">LLM01 — Prompt Injection</span>`
-   - ✗ `<span class="tag tag-owasp">LLM01</span>`
-   - ✓ `<span class="tag tag-agentic">ASI05 — Cascading Hallucination Attacks</span>`
-   - ✗ `<span class="tag tag-agentic">ASI05</span>`
-
-   The finding JSON keeps the short code (`"owasp_llm": "LLM06"`) — only the HTML tag rendering expands it.
-
-13. **Rubric table is static content.** The RAISE Maturity Posture section in the template includes a static rubric table (6 rows, scores 0–5 with labels and meanings). Do not edit its content, do not substitute placeholders into it, and do not expand or remove rows. The table is intentionally fixed so every report renders the scale identically.
-
-14. **Do not introduce new sections, new colors, new fonts, or new component types.** If analysis results include something the template doesn't cover, file it as a finding or a positive — do not invent a new section.
-
-15. **Self-contained output.** All CSS stays inline as in the template. No external scripts. No external fonts beyond the Lausanne/Arial stack already declared. The HTML must render correctly when opened as `file://`.
-
-### If a section is empty
-
-- **No findings:** render only the Findings Register section heading and description, with no finding cards. Set overall status to `status-clean`.
-- **No positives:** replace the REPEAT block with `<div class="none-found">No confirmed positive controls were verified during this scan.</div>`
-- **No log files:** use PICK Variant B with a message like `No log files found in the workspace.`
-
-### Verification before writing
-
-After assembling the HTML, confirm:
-- Every Praxa placeholder has been replaced. Use this precise check: `grep -cE '\{\{[A-Z][A-Z_]{2,}\}\}' $REPORT_FILE` — should return `0`. This pattern matches only Praxa-style `{{UPPER_SNAKE_CASE}}` placeholders. Jinja2, Mustache, or other template syntax in cited code evidence (e.g., `{{ result }}`, `{{ user.name }}`) will not match because those use lowercase or include spaces. Do NOT use `grep '{{'` — it will false-flag every Jinja2 example in your evidence blocks.
-- Every `<!-- REPEAT:` / `<!-- END:` / `<!-- PICK:` comment marker has been removed.
-- Every finding card's `id` matches the corresponding anchor href in Remit Coverage.
-- The finding counts in the footer match the counts in the Findings Register.
-- The posture summary entry from Step 10 is present in the findings JSON but is NOT rendered as a finding card in the HTML (it's metadata, not a finding).
-- The Remit Coverage stat pills (Verified + Gap + Partial + Vague Policy + Enforcement Not Possible) sum to the Total Rules count. ENP rules count toward the total.
+**If it exits non-zero**, it prints exactly what is wrong — almost always a missing or inconsistent field in the JSON, named by path (e.g., `$.behavior_summary: required field is missing`, or `$.footer.severity_counts: critical=5 but findings[] contains 6 critical`). Fix the JSON from Step 10 and re-run. **Do not hand-edit the HTML or the TXT — they are generated output.** Do not redesign the report, edit the template, or post-process the output: the template, the renderer, and the schema are version-locked and ship together.
 
 ---
 
-## Step 12 — Final Summary (stdout AND file)
+## Step 12 — Final Summary (stdout)
 
-Produce this final summary block. **Write it to a file first, then print it to stdout.** Writing to a file is required because long scans frequently hit context compression between Step 11 and Step 12, causing stdout output to be truncated or lost. The file copy is the operator's reliable way to see the summary regardless of session state.
+`render.py` has already written the plain-text summary at `./reports/<agent-slug>-analysis-<TIMESTAMP>.txt` — it contains the agent header, the behavior summary, the RAISE posture, the finding counts, the remit coverage tally, and every Critical finding with its recommended action.
 
-**Write to:** `./reports/<agent-slug>-analysis-<TIMESTAMP>.txt` (use the same `AGENT_SLUG` and `TIMESTAMP` variables as the HTML report, so the three files — `.html`, `.json`, `.txt` — share the same base name pattern).
+Print that file to stdout, then add a short pointer to the three artifacts:
 
 ```
-Praxa — Agent Behavior Analysis
-Agent:    [agent name]
-Analysis: [timestamp]
-Artifacts read: [count]
+[contents of ./reports/<agent-slug>-analysis-<TIMESTAMP>.txt]
 
-Scan Summary:
-  [the 2–4 sentence narrative from Step 9, wrapped to readable width]
-
-Findings: [N Critical]  [N High]  [N Medium]  [N Low]  [N Informational]
-
-Remit Coverage: [N] rules · [N] verified · [N] gaps · [N] partial · [N] vague policy
-
-RAISE Posture:
-  Limit Your Domain          [score]/5
-  Balance Your Knowledge     [score]/5
-  Implement Zero Trust       [score]/5
-  Manage Your Supply Chain   [score]/5
-  Build an AI Red Team       [score]/5
-  Monitor Continuously       [score]/5
-
-Weighted Overall: [score] / 5.0
-
-Report:   [REPORT_FILE]
-Findings: ./reports/[agent-slug]-findings-[date].json
-Summary:  ./reports/[agent-slug]-analysis-[timestamp].txt
+Files written:
+  Report:   ./reports/<agent-slug>-analysis-<TIMESTAMP>.html
+  Findings: ./reports/<agent-slug>-findings-<YYYY-MM-DD>.json
+  Summary:  ./reports/<agent-slug>-analysis-<TIMESTAMP>.txt
 ```
 
-If there are any Critical findings, list each one's summary and recommended action immediately after the summary block (in both the file and stdout) so the operator sees them without opening the HTML.
-
-**Order of operations in Step 12:**
-1. Write the summary file (so it exists even if the session is compressed mid-Step 12).
-2. Print the summary block to stdout.
-3. If Critical findings exist, print their summaries and recommended actions.
+That is the end of the analysis. (The summary file already exists on disk regardless of session state — if stdout is truncated, the operator still has it.)
 
 ---
 
