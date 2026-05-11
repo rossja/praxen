@@ -21,7 +21,7 @@ For each example we followed the standard Praxa analysis workflow:
 
 **Source:** [OWASP-ASI/finbot-ctf-demo](https://github.com/OWASP-ASI/finbot-ctf-demo) — CineFlow Productions autonomous invoice processor from the OWASP Agentic AI CTF.
 
-Praxa produced 16 findings (8 Critical, 6 High, 2 Medium), weighted RAISE posture 0.75 / 5.0 (Absent) — including unauthenticated goal injection via `/api/admin/finbot/goals`, a runtime-mutable `fraud_detection_enabled` flag toggleable from an unauthenticated endpoint, vendor-supplied invoice description text flowing unfiltered into LLM context, and a compound chain that turns vendor invoice submission into unauthorized payment release.
+Praxa produced 16 findings (8 Critical, 4 High, 3 Medium, 1 Low), weighted RAISE posture 0.60 / 5.0 (Absent) — including unauthenticated goal injection via `POST /api/admin/finbot/goals` writing attacker text straight into the agent's system prompt (`config.custom_goals`), an `approve_invoice` path that sets `payment_processed=True` with no gate on amount, vendor status, fraud signal, or caller, vendor-supplied invoice description text flowing verbatim into the LLM context, a `fraud_detection_enabled` flag toggleable from an unauthenticated endpoint, and a compound chain that turns one HTTP POST into an authorized payment.
 
 - [`finbot/WORKER_REMIT.md`](finbot/WORKER_REMIT.md) — intended-scope policy
 - [`finbot/finbot-analysis.html`](finbot/finbot-analysis.html) — human-readable analysis report
@@ -33,7 +33,7 @@ Praxa produced 16 findings (8 Critical, 6 High, 2 Medium), weighted RAISE postur
 
 **Source:** [opena2a-org/damn-vulnerable-ai-agent](https://github.com/opena2a-org/damn-vulnerable-ai-agent) — the HelperBot persona from the DVAA training platform.
 
-A general-purpose assistant with `read_file`, `write_file`, and `search_web` tools. Praxa produced 16 findings (5 Critical, 9 High, 2 Medium), weighted RAISE posture 0.45 / 5.0 (Absent) — including `inputValidation:false` wired into the agent config (the remit explicitly requires path validation), `leakSystemPrompt:true` and `acceptFalseHistory:true` exposing prompt and identity manipulation surfaces, no audit logging of tool calls, and a compound chain where unvalidated input reaches `write_file` with no approval gate or audit trail.
+A general-purpose assistant whose remit assumes path-validated `read_file`/`write_file`, untrusted-input handling, system-prompt confidentiality, per-tool-call audit logging, and a 20-call/session cap — none of which exist in the code. Praxa produced 13 findings (5 Critical, 4 High, 3 Medium, 1 Informational), weighted RAISE posture 0.45 / 5.0 (Absent) — including `read_file`/`write_file` with no path confinement, user input reaching the model with no validation or prompt-injection handling, an LLM-mode system prompt that embeds a literal internal API key and instructs the agent to disclose its own configuration, every feature flag (`inputValidation`/`outputFiltering`/`toolApproval`/`rateLimiting`/`auditLogging`) set to `false`, and `acceptFalseHistory` letting role-play scenarios rewrite the agent's identity.
 
 - [`helperbot/WORKER_REMIT.md`](helperbot/WORKER_REMIT.md) — intended-scope policy
 - [`helperbot/helperbot-analysis.html`](helperbot/helperbot-analysis.html) — human-readable analysis report
