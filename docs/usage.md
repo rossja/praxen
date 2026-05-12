@@ -78,12 +78,14 @@ A new pair of timestamped files is written. Prior reports are not overwritten �
 
 Praxa only scores what it can see. If you disagree with a finding — especially a RAISE category score that feels lower than reality — the usual cause is that the evidence you handed it didn't *show* a control that's actually in place: a review process, a deployment-time limit, an external guardrail, a monitoring pipeline, a red-team cadence. Praxa won't assume those exist; it scores absence of evidence as absence of control (see the calibration anchors — present-but-undocumented and present-but-defeated both land low).
 
-The fix is to give it more evidence and re-run. Add whatever artifact demonstrates the control — in whatever (text) format you have it: a runbook, a CI config, a policy doc, a red-team report, a ticket history, an exported dashboard config, even a written description of the process — and ask Praxa to factor it in:
+The fix is to give it more evidence and re-run. Add whatever artifact demonstrates the control — a runbook, a CI config, a policy doc, a red-team report, a ticket history, an exported dashboard config, even a written description of the process — and ask Praxa to factor it in:
 
 ```
 Here's our red-team report and the production alerting config. Please re-run the
 behavior-verifier skill against the same workspace and remit, and factor these in.
 ```
+
+Text artifacts are the most reliable channel and the only thing Praxa's automatic workspace sweep looks for. Image evidence (a screenshot of a dashboard or an alerting rule) works too **if your coding agent's `Read` tool is multimodal — Claude Code's is** — but the sweep won't go hunting for image files, so name the file explicitly when you ask for the re-run ("…and factor in `alerting-dashboard.png`"). If you're unsure, a written description of what the screenshot shows is always safe.
 
 Praxa will re-evaluate with the added context. This is the intended workflow: the first run tells you what the evidence supports; subsequent runs let you close the gap between *what's true* and *what's demonstrable*. If a score is still low after you've supplied the evidence, that gap is itself the finding — the control may be real but unverifiable to anyone who wasn't told, which is its own maturity problem.
 
