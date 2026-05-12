@@ -12,12 +12,17 @@ Covers:
   * render.py produces HTML with zero unsubstituted placeholders / leftover markers
   * render.py output is byte-deterministic
   * rendered HTML/TXT match the committed golden files (tests/fixtures/finbot.golden.*)
+  * HTML normalises stray HTML entities in prose (no double-escaping)
   * --out-txt-only mode works
+  * every committed regression baseline under tests/baselines/ validates against
+    schema.py, and the post-relicense ones re-render byte-identically from their
+    JSON and quote their remit doc verbatim
   * negative cases (legacy bare list, missing field, count mismatch, bad enum,
     missing RAISE category, broken anchor) all fail loudly with a non-zero exit
 """
 from __future__ import annotations
 
+import glob
 import json
 import os
 import re
@@ -277,6 +282,79 @@ def main():
              lambda d: d["raise_posture"]["categories"].pop())
     negative("rejects a weighted_overall that doesn't match the category sum",
              lambda d: d["raise_posture"].__setitem__("weighted_overall", 4.99))
+
+    # 6. committed regression baselines under tests/baselines/. The canonical
+    #    JSON is the source of truth; the committed HTML/TXT are derived. For the
+    #    post-relicense baselines (rendered with the current template) this asserts
+    #    they re-render byte-for-byte from their JSON — the regression net that
+    #    would have caught a renderer change silently desyncing a committed report.
+    #    Pre-relicense baselines (and the schema-1.0 v0.2 set) keep the old report
+    #    header by design — see tests/baselines/README.md → "Note on the relicense";
+    #    those are validated as far as the current schema/template allow and the
+    #    byte-compare is skipped. From praxa_version 0.6.0 on, the baseline must
+    #    also quote its remit doc verbatim (tests/remits/<slug>.md): every rule_text
+    #    and every `/`-separated policy_rule_text segment must be a substring.
+    baselines_root = os.path.join(REPO_ROOT, "tests", "baselines")
+    baseline_jsons = sorted(glob.glob(os.path.join(baselines_root, "*", "*", "*-findings-*.json")))
+    check("found committed regression baselines under tests/baselines/", len(baseline_jsons) > 0)
+    for bj in baseline_jsons:
+        rel = os.path.relpath(bj, REPO_ROOT)
+        data = json.load(open(bj, encoding="utf-8"))
+        sv = str(data.get("schema_version", ""))
+        if not sv.startswith("2."):
+            check(f"baseline {rel}: schema_version {sv!r} — frozen pre-2.0 artifact, schema/render checks skipped", True)
+            continue
+        try:
+            schema.validate(data)
+            check(f"baseline {rel}: validates against schema.py", True)
+        except schema.SchemaError as e:
+            check(f"baseline {rel}: validates against schema.py", False, str(e))
+            continue
+        bdir = os.path.dirname(bj)
+        c_html = next(iter(glob.glob(os.path.join(bdir, "*-analysis-*.html"))), None)
+        c_txt = next(iter(glob.glob(os.path.join(bdir, "*-analysis-*.txt"))), None)
+        check(f"baseline {rel}: has a committed .html and .txt alongside it", bool(c_html and c_txt))
+        if not (c_html and c_txt):
+            continue
+        r_html = os.path.join(tmp, "bl.html")
+        r_txt = os.path.join(tmp, "bl.txt")
+        r = run_render(["--findings", bj, "--template", TEMPLATE, "--out-html", r_html, "--out-txt", r_txt])
+        check(f"baseline {rel}: render exits 0", r.returncode == 0, r.stderr.strip())
+        post_relicense = b"github.com/Exabeam/deckard" in open(c_html, "rb").read()
+        if post_relicense and r.returncode == 0:
+            check(f"baseline {rel}: HTML re-renders byte-identical from its JSON",
+                  open(c_html, "rb").read() == open(r_html, "rb").read(),
+                  "committed HTML differs from a fresh render of the committed JSON")
+            check(f"baseline {rel}: TXT re-renders byte-identical from its JSON",
+                  open(c_txt, "rb").read() == open(r_txt, "rb").read(),
+                  "committed TXT differs from a fresh render of the committed JSON")
+        else:
+            check(f"baseline {rel}: pre-relicense template — byte re-render comparison skipped", True)
+        # remit-quote invariant (praxa_version >= 0.6.0)
+        try:
+            pv = tuple(int(x) for x in str(data.get("praxa_version", "0")).split("."))
+        except ValueError:
+            pv = (0,)
+        slug = data.get("scan", {}).get("agent_slug") or os.path.basename(bdir)
+        remit_path = os.path.join(REPO_ROOT, "tests", "remits", f"{slug}.md")
+        if pv >= (0, 6, 0):
+            if not os.path.isfile(remit_path):
+                check(f"baseline {rel}: has a matching tests/remits/{slug}.md", False)
+            else:
+                remit = open(remit_path, encoding="utf-8").read()
+                quoted = []
+                for rule in data["remit_coverage"]["rules"]:
+                    quoted.append(("rule_text", rule["rule_id"], rule["rule_text"]))
+                for f in data["findings"]:
+                    for seg in f.get("policy_rule_text", "").split(" / "):
+                        if seg.strip():
+                            quoted.append(("policy_rule_text", f["id"], seg.strip()))
+                missing = [(kind, who, txt) for (kind, who, txt) in quoted if txt not in remit]
+                check(f"baseline {rel}: every rule_text / policy_rule_text is quoted verbatim from tests/remits/{slug}.md",
+                      not missing,
+                      "; ".join(f"{kind} of {who}: {txt[:60]!r}" for kind, who, txt in missing[:3]))
+        else:
+            check(f"baseline {rel}: praxa_version < 0.6.0 — remit-quote check skipped", True)
 
     print(f"\n{_passed} passed, {_failed} failed")
     return 1 if _failed else 0
