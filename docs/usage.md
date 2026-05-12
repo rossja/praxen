@@ -5,7 +5,7 @@
 
 # Usage
 
-Running a Praxa analysis takes two inputs: a **Worker Remit** (the agent's declared policy) and **evidence** (whatever the agent's code, deployment state, or behavioral records can provide). Praxa produces three output files in `./reports/`.
+Running a Praxa analysis takes two inputs: a **Worker Remit** (the agent's declared policy) and **evidence** (whatever the agent's code, deployment state, behavioral records, or development/governance docs can provide). Praxa produces three output files in `./reports/`.
 
 This page covers the end-to-end run. For installing Praxa, see [Installation](installation.md). For authoring the Worker Remit, see [Writing Worker Remits](writing-remits.md).
 
@@ -21,15 +21,16 @@ If you don't have one, your coding agent can help draft one before the analysis 
 
 ### Evidence
 
-Praxa accepts three input shapes — used individually or in combination:
+Praxa accepts four input shapes — used individually or in combination:
 
 | Shape | What you point Praxa at |
 |---|---|
 | **Source repository** | A directory containing the agent's code, configs, skill files, dependencies, prompts. Most common for repo-based agents. |
-| **Running deployment** | A directory containing live memory files (`MEMORY.md`, `SOUL.md`), operational logs (action reports, session JSONL, audit trails, escalation logs), and live config files. Pulled from a deployed instance of the agent. |
+| **Running deployment** | A directory containing live memory files (`MEMORY.md`, `SOUL.md`), operational logs (action reports, session JSONL, audit trails, escalation logs), and live config files. Pulled from a deployed instance of the agent — for example, point Praxa at an OpenClaw worker's `Workspace/` folder, which holds the `soul.md` and the other code and prompt artifacts that make up the agent's skillset, alongside its accumulated memory and logs. |
 | **Behavioral artifacts** | A chat transcript, email history, decision record, or any conversation log that captures how the agent has actually behaved. |
+| **Governance & methodology docs** | RAISE scores *maturity*, not just behavior — so development and operational practice documents count as evidence too. A red-team plan or its results, threat models, security review records, SDLC/runbook docs, incident retrospectives, dependency-management policy, monitoring/alerting design. These feed the maturity-oriented RAISE categories (`build_an_ai_red_team`, `monitor_continuously`, `manage_your_supply_chain`) that source code alone can't speak to. |
 
-You can provide more than one shape in the same analysis — for example, source code plus a recent action log. Coverage and confidence increase with each additional input shape.
+You can provide more than one shape in the same analysis — for example, source code plus a recent action log plus the team's red-team report. Coverage and confidence increase with each additional input shape.
 
 ---
 
@@ -70,6 +71,23 @@ Please re-run the behavior-verifier skill against the same workspace and remit.
 ```
 
 A new pair of timestamped files is written. Prior reports are not overwritten — you can compare runs by diffing the `findings-<date>.json` files or by opening multiple HTML reports side by side.
+
+---
+
+## Results tuning
+
+Praxa only scores what it can see. If you disagree with a finding — especially a RAISE category score that feels lower than reality — the usual cause is that the evidence you handed it didn't *show* a control that's actually in place: a review process, a deployment-time limit, an external guardrail, a monitoring pipeline, a red-team cadence. Praxa won't assume those exist; it scores absence of evidence as absence of control (see the calibration anchors — present-but-undocumented and present-but-defeated both land low).
+
+The fix is to give it more evidence and re-run. Add whatever artifact demonstrates the control — in whatever format you have it: a runbook, a CI config, a screenshot of a dashboard, a policy doc, a red-team report, a ticket history, even a written description of the process — and ask Praxa to factor it in:
+
+```
+Here's our red-team report and the production alerting config. Please re-run the
+behavior-verifier skill against the same workspace and remit, and factor these in.
+```
+
+Praxa will re-evaluate with the added context. This is the intended workflow: the first run tells you what the evidence supports; subsequent runs let you close the gap between *what's true* and *what's demonstrable*. If a score is still low after you've supplied the evidence, that gap is itself the finding — the control may be real but unverifiable to anyone who wasn't told, which is its own maturity problem.
+
+For the fuller treatment — including when a finding means "fix the remit" or "fix the agent" rather than "add evidence", and how to record an accepted risk — see [Challenging and Revising Findings](challenging-findings.md).
 
 ---
 

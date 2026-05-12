@@ -1,0 +1,100 @@
+<!--
+  Copyright © 2026 Exabeam, Inc. All Rights Reserved.
+  Confidential and Proprietary. Do not distribute. Use by permission only.
+-->
+
+# OWASP Gen AI Security — the frameworks Praxa uses
+
+Every finding Praxa produces is tagged against industry-standard OWASP frameworks so the result lands in language your security team already speaks. This page explains where those frameworks come from and gives a one-line gloss on each risk so you can read a tag without leaving the report.
+
+---
+
+## OWASP, briefly
+
+The **Open Worldwide Application Security Project** ([owasp.org](https://owasp.org/)) is a non-profit foundation that produces free, community-built security resources — standards, tools, and the famous "Top 10" risk lists. Its material is vendor-neutral, openly licensed (mostly CC BY-SA), and widely treated as a baseline reference in application security. The original *OWASP Top 10* for web applications is the best-known example.
+
+## OWASP Gen AI Security Project
+
+As LLM-based systems moved into production, OWASP spun up a dedicated effort: the **OWASP Gen AI Security Project** ([genai.owasp.org](https://genai.owasp.org/)). It maintains the AI-specific guidance Praxa relies on — currently three documents:
+
+| Document | What it covers | Praxa tag prefix |
+|---|---|---|
+| [OWASP Top 10 for LLM Applications 2025](https://genai.owasp.org/resource/owasp-top-10-for-llm-applications-2025/) | Risks in applications built on large language models | `LLM01`–`LLM10` |
+| [OWASP Top 10 for Agentic AI Applications 2026](https://genai.owasp.org/resource/owasp-top-10-for-agentic-ai-applications/) | Risks specific to autonomous, tool-using agents | `ASI01`–`ASI10` |
+| [A Practical Guide for Secure MCP Server Development 2026](https://genai.owasp.org/resource/a-practical-guide-for-secure-mcp-server-development/) | Securing Model Context Protocol servers and the tools they expose | `mcp` (checklist items) |
+
+Praxa carries distilled extracts of all three in its knowledge base (`skills/behavior-verifier/knowledge/`), but the canonical, full-length versions live at the links above — go there for the complete write-ups, examples, and references.
+
+---
+
+## OWASP Top 10 for LLM Applications 2025
+
+The risk landscape for any system that puts an LLM in the loop. Each finding Praxa tags with one of these traces to a behavior or code pattern in the agent's evidence.
+
+| ID | Risk | One-line gloss |
+|---|---|---|
+| **LLM01** | Prompt Injection | Untrusted input (direct or smuggled in via external content) overrides the model's instructions. |
+| **LLM02** | Sensitive Information Disclosure | The model leaks PII, secrets, or proprietary data through its outputs. |
+| **LLM03** | Supply Chain | Compromised or untrusted models, datasets, plugins, or dependencies enter the system. |
+| **LLM04** | Data and Model Poisoning | Training, fine-tuning, or RAG data is manipulated to bias or backdoor the model. |
+| **LLM05** | Improper Output Handling | Model output is passed downstream (shell, SQL, HTML, eval) without validation. |
+| **LLM06** | Excessive Agency | The model is granted more capability, permission, or autonomy than the task needs. |
+| **LLM07** | System Prompt Leakage | The system prompt — and any secrets or logic baked into it — is exposed. |
+| **LLM08** | Vector and Embedding Weaknesses | Flaws in embeddings or vector stores enable injection, poisoning, or data leakage via RAG. |
+| **LLM09** | Misinformation | The model produces confident, plausible, wrong output that users act on. |
+| **LLM10** | Unbounded Consumption | Unconstrained inference (cost, compute, rate) enables denial-of-wallet or denial-of-service. |
+
+→ Full document: **[OWASP Top 10 for LLM Applications 2025](https://genai.owasp.org/resource/owasp-top-10-for-llm-applications-2025/)**
+
+---
+
+## OWASP Top 10 for Agentic AI Applications 2026
+
+Risks that emerge once an LLM is wired to tools, memory, other agents, and the ability to act. This is the list that matters most for the kind of OpenClaw-style workers Praxa is built to verify.
+
+| ID | Risk | One-line gloss |
+|---|---|---|
+| **ASI01** | Agent Goal Hijack | An attacker redirects the agent's objective so it pursues their goal instead of yours. |
+| **ASI02** | Tool Misuse and Exploitation | The agent is steered into using its legitimate tools for illegitimate ends. |
+| **ASI03** | Identity and Privilege Abuse | The agent's identity, tokens, or delegated permissions are abused or over-broad. |
+| **ASI04** | Agentic Supply Chain Vulnerabilities | Malicious or compromised plugins, MCP servers, skills, or sub-agents enter the agent's stack. |
+| **ASI05** | Unexpected Code Execution (RCE) | The agent runs attacker-influenced code on the host or in connected systems. |
+| **ASI06** | Memory and Context Poisoning | Persistent memory or retrieved context is seeded with content that corrupts future behavior. |
+| **ASI07** | Insecure Inter-Agent Communication | Messages between agents are unauthenticated, unvalidated, or trusted blindly. |
+| **ASI08** | Cascading Failures | One bad action or output propagates through a chain of agents/tools and amplifies. |
+| **ASI09** | Human-Agent Trust Exploitation | The agent's perceived authority is used to manipulate the humans who rely on it (or vice versa). |
+| **ASI10** | Rogue Agents | An agent operates outside its remit — compromised, misconfigured, or deliberately planted. |
+
+→ Full document: **[OWASP Top 10 for Agentic AI Applications 2026](https://genai.owasp.org/resource/owasp-top-10-for-agentic-ai-applications/)**
+
+---
+
+## A Practical Guide for Secure MCP Server Development 2026
+
+The Model Context Protocol (MCP) is how many agents discover and call external tools. MCP servers are unusual: they run with delegated user permissions, support dynamic tool loading, and can chain tool calls — so a single weakness amplifies. When Praxa finds an MCP configuration in the evidence (`.mcp.json`, `mcp.json`, or similar), it applies the guide's **minimum-bar checklist** across these areas:
+
+- **Architecture** — local (STDIO / loopback) vs. remote (TLS, authenticated) binding; session isolation between users and agents.
+- **Tool design** — least-privilege scopes; no destructive tools without confirmation; clear, non-deceptive tool descriptions.
+- **Input/output validation** — schema-validated arguments; sanitized outputs; no raw passthrough.
+- **Prompt-injection controls** — tool descriptions and returned content treated as untrusted, not as instructions.
+- **Authentication & authorization** — OAuth 2.1 / OIDC for remote servers; scoped, short-lived tokens; no token passthrough to downstream APIs.
+- **Secrets & deployment** — no credentials in config files, env files, or tool descriptions; non-root, sandboxed execution; pinned, scanned dependencies.
+- **Governance & audit** — tool invocations logged; a review process for new or updated tools; MCP-server identity tracked separately from the agent's.
+
+Any "No" against the checklist is a finding; secrets in an MCP config file are a Critical.
+
+→ Full document: **[A Practical Guide for Secure MCP Server Development 2026](https://genai.owasp.org/resource/a-practical-guide-for-secure-mcp-server-development/)**
+
+---
+
+## How this fits with RAISE
+
+The OWASP frameworks above answer *"what kind of risk is this finding?"* The [RAISE Framework](RAISE.md) answers *"how mature is this agent's security posture overall?"* — a six-category 0–5 score. Every Praxa finding carries both: a RAISE category tag and (where applicable) an OWASP LLM, OWASP Agentic, or MCP tag. See [Interpreting Reports](interpreting-reports.md) for how the tags appear on a finding card.
+
+---
+
+## See also
+
+- [The RAISE Framework](RAISE.md) — the maturity-scoring side of the analysis
+- [Interpreting Reports](interpreting-reports.md) — where these tags show up in a Praxa report
+- [Challenging and Revising Findings](challenging-findings.md) — what to do when you disagree with a finding
