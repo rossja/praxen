@@ -5,13 +5,13 @@
 
 # Praxa Pre-Release Test Plan
 
-Praxa's regression test suite. Before every release, run the full ten-target suite below, then **diff every target against the latest frozen baseline in `baselines/`** and against the per-target bands in this document (see *[What a release review looks like](#what-a-release-review-looks-like)*). Ad-hoc / mid-development re-run reports are **not** kept here — they regenerate and drift; the only committed runs are the named, version-pinned baselines under `baselines/`.
+Praxa's regression test suite. Before every release, run the full eleven-target suite below, then **diff every target against the latest frozen baseline in `baselines/`** and against the per-target bands in this document (see *[What a release review looks like](#what-a-release-review-looks-like)*). Ad-hoc / mid-development re-run reports are **not** kept here — they regenerate and drift; the only committed runs are the named, version-pinned baselines under `baselines/`.
 
 ## Directory contents
 
 - `README.md` — this file
 - `remits/` — the Worker Remits developed for each test agent. Reusable; do not change between analyses.
-- `baselines/` — frozen, committed runs, one set per Praxa version (`baselines/<version>-sequential/`). The comparison point for the release review and the Phase-2 parallel-vs-sequential parity gate. See [`baselines/README.md`](baselines/README.md). **Latest for the nine core targets: [`baselines/v0.3-sequential/`](baselines/v0.3-sequential/BASELINE.md)** (Praxa v0.3.0, schema 2.0). The tenth target, `deepagents-cli`, was added later and is frozen at **[`baselines/v0.6-sequential/`](baselines/v0.6-sequential/BASELINE.md)** (Praxa v0.6.0) — a partial baseline (just that one target) until a full v0.6 re-freeze of all ten. Previous: [`baselines/v0.2-sequential/`](baselines/v0.2-sequential/BASELINE.md) (Praxa v0.2.0, schema 1.0) — kept as the "before" snapshot for the schema-shift check.
+- `baselines/` — frozen, committed runs, one set per Praxa version (`baselines/<version>-sequential/`). The comparison point for the release review and the Phase-2 parallel-vs-sequential parity gate. See [`baselines/README.md`](baselines/README.md). **Latest for the nine core targets: [`baselines/v0.3-sequential/`](baselines/v0.3-sequential/BASELINE.md)** (Praxa v0.3.0, schema 2.0). The two MCP-coverage targets, `deepagents-cli` and `yaah`, were added later and are frozen at **[`baselines/v0.6-sequential/`](baselines/v0.6-sequential/BASELINE.md)** (Praxa v0.6.x) — a partial baseline (just those two) until a full v0.6 re-freeze of all eleven. Previous: [`baselines/v0.2-sequential/`](baselines/v0.2-sequential/BASELINE.md) (Praxa v0.2.0, schema 1.0) — kept as the "before" snapshot for the schema-shift check.
 - `fixtures/`, `render/` — the `render.py`/`schema.py` smoke harness (`python3 tests/render/test_render.py`): the canonical-JSON fixture (`finbot.canonical.json`), the committed **golden render output** (`finbot.golden.html` / `finbot.golden.txt` — byte-compared on every run; the test header comments say how to regenerate them when output changes intentionally), and the negative-case mutations.
 - CI runs `tests/render/test_render.py` + `build.sh` on every push and PR across Python **3.9 / 3.12 / 3.13** (`.github/workflows/ci.yml`); pushing a `v*` tag runs the suite, builds the zip, and cuts a GitHub release (`.github/workflows/release.yml` — it also checks the tag matches `PRAXA_SPEC.md`'s version).
 
@@ -24,7 +24,7 @@ Blind-run scoring carries inherent variance — the *same target* re-analyzed fr
 ## Pre-release checklist
 
 1. Build the candidate release zip: `./build.sh` from the repo root; run the render smoke harness (`python3 tests/render/test_render.py`). CI already runs both on the PR across Python 3.9/3.12/3.13 — confirm it's green.
-2. For each of the ten targets below, either:
+2. For each of the eleven targets below, either:
    - Scan the already-built zip against the target workspace (confirms the distributed zip works), **or**
    - Scan from the repo's `skills/` directly (confirms skill edits land correctly).
 3. **Full compare against the baseline.** For every target, diff the new findings JSON against `baselines/<latest>-sequential/<target>/…-findings-*.json`: weighted RAISE within ±0.3–0.5 of the baseline *and* inside the per-target band below; severity counts in the same neighbourhood; **dominant pattern / themes still covered (no Critical theme dropped)** — this last one is the hard gate. (See *[What a release review looks like](#what-a-release-review-looks-like)* for the per-report checks.)
@@ -128,11 +128,19 @@ Ordered from simplest (intentionally-vulnerable CTF) to most complex (active pro
 **Notes:** The suite's **MCP-coverage** target — the first one with a real checked-in `.mcp.json` *and* a non-trivial MCP subsystem (auto-discovery of user- and project-level configs, a SHA-256 fingerprint trust store, OAuth device-code login with 0600 token files, env-var header interpolation). A healthy run must exercise `SKILL.md` Step 6 "MCP Server Evaluation" end-to-end: discover the `.mcp.json` in Step 4, load `knowledge/KB_MCP_SECURITY.md`, apply the MCP minimum-bar checklist, and emit findings carrying `{ "kind": "mcp", … }` tags. Praxa should find: the default `LocalShellBackend` runs `execute` on the host with no sandbox; human-in-the-loop (`interrupt_on`) is off by default; `default_agent_prompt.md` is a session-loaded notes file the agent is told it may rewrite; no durable local action log; no tool-poisoning check on MCP tool descriptions or sanitization of MCP outputs; no approval gate on MCP tool calls; user-level `.mcp.json` files loaded without a trust prompt; loose `langsmith`/`wcmatch` specs in the SDK `pyproject.toml`. Also a **bidirectional-calibration** target — the *operative* controls (filesystem path validation, the project-MCP trust gate, 0600 credential handling, committed `uv.lock` + Dependabot, the tested HITL mechanism) must register: Implement Zero Trust and Balance Your Knowledge Base at **Partial (2)**, Manage Your Supply Chain at **Established (3)** — a weighted score in the *Absent* band (< 1.0) for this target means the scoring is over-corrected. Compounds to one Critical (external content → writable session notes → unsandboxed exec, no approval).
 **Baseline expectation:** ≈ 1 Critical / 3-5 High / 4-6 Medium / 1-3 Low / 0-1 Info, weighted ≈ 1.7-2.3 / 5.0 (Partial). Frozen at [`baselines/v0.6-sequential/`](baselines/v0.6-sequential/BASELINE.md) (Praxa v0.6.0).
 
+### 11. yaah — agent-config harness (MCP-path coverage, "controls present" end)
+
+**Remit:** `remits/yaah.md`
+**Source:** https://github.com/dirien/yet-another-agent-harness
+**Scope:** the harness itself — `cmd/yaah`, `pkg/{harness,hooks,mcpserver,mcp,session,generator,schema}` — plus the root `.mcp.json`, `.claude/settings.json`, `go.mod`, `go.sum`, `AGENTS.md`. Exclude `.claude/skills/*/references/examples/`, `website/`, `qa/` except where a finding cites them.
+**Notes:** The second **MCP-coverage** target, and the suite's clearest *"controls present, score honestly"* case (alongside OpenHands). yaah is a Go CLI that generates config for four coding agents and ships a built-in security toolset: a deterministic command-guard hook (blocks `rm -rf /`, force-push to main, `DROP TABLE`, `mkfs`, raw disk writes on every Bash call), a 13-pattern secret scanner on every edit, a structured per-session audit log, a built-in `yaah serve` MCP server with clean tool descriptions, exact-pinned Go deps. A healthy run must exercise `SKILL.md` Step 6 end-to-end on its `.mcp.json` (and the `mcpServers` block in `.claude/settings.json`) — `KB_MCP_SECURITY.md` → checklist → `mcp`-tagged findings — and must **credit the operative controls**: Manage Your Supply Chain and Monitor Continuously at **Established (3)** (the `go.mod`/`go.sum` pins; the real session audit log), Implement Zero Trust / Balance Your Knowledge Base at **Partial (2)** (the command-guard + secret-scanner run on the agent's path), and the built-in MCP server's clean descriptions registered as a *positive*, not a finding. A weighted score in the *Absent* band (< 1.0) here, or zeroing the categories the hooks/audit-log cover, means the scoring is over-corrected. The headline finding (the one **High**): `pkg/generator/hookmap.go` leaves `PreToolUse`/`PostToolUse` blank for the Codex CLI target, so `yaah generate --agent codex` ships a config with none of the advertised hooks — a policy-implementation divergence the run must catch from reading `hookmap.go`. Other expected findings: `context7` MCP server launched via unpinned `npx -y @context7/mcp` (silent-update vector); MCP tool calls fall outside the PreToolUse/PostToolUse hooks → not in the session log and ungated; no tool-poisoning check / output sanitization on the third-party servers; auto-managed `AGENTS.md` (with `CLAUDE.md`/`GEMINI.md` symlinks) is a session-loaded, regenerable surface; no `SECURITY.md`.
+**Baseline expectation:** ≈ 0 Critical / 1-2 High / 3-6 Medium / 2-4 Low / 0-1 Info, weighted ≈ 2.0-2.5 / 5.0 (Partial). Frozen at [`baselines/v0.6-sequential/`](baselines/v0.6-sequential/BASELINE.md) (Praxa v0.6.1).
+
 ---
 
 ## What a release review looks like
 
-The release review is a **full compare**: run all ten targets and diff each against the latest frozen baseline — [`baselines/v0.3-sequential/`](baselines/v0.3-sequential/BASELINE.md) for the nine core targets, [`baselines/v0.6-sequential/`](baselines/v0.6-sequential/BASELINE.md) for `deepagents-cli` (until a full v0.6 re-freeze).
+The release review is a **full compare**: run all eleven targets and diff each against the latest frozen baseline — [`baselines/v0.3-sequential/`](baselines/v0.3-sequential/BASELINE.md) for the nine core targets, [`baselines/v0.6-sequential/`](baselines/v0.6-sequential/BASELINE.md) for `deepagents-cli` and `yaah` (until a full v0.6 re-freeze).
 
 **Compare against the baseline (the hard gate — do this first)**
 - *Weighted RAISE* within ±0.3–0.5 of the baseline number, *and* inside the per-target band above.
@@ -165,7 +173,7 @@ Then, for each target, open the HTML report and check:
 
 ## Notes on the test set composition
 
-The ten targets deliberately span a spectrum:
+The eleven targets deliberately span a spectrum:
 
 - **Intentionally vulnerable** (FinBot, HelperBot, Devika) — calibration anchors. Findings here should be dense and unambiguous.
 - **Mature library, pre-warned maintainer** (LangChain SQL) — confirms the skill handles well-documented targets without producing value-free findings.
@@ -173,6 +181,6 @@ The ten targets deliberately span a spectrum:
 - **Framework defaults pattern** (AutoGen, OpenHands) — exercises the "sandbox exists but defaults bypass it" detection.
 - **Production agent, solo-maintainer territory** (Sweep, Aider) — exercises subtle and novel finding detection; the targets most likely to produce disclosure-worthy output.
 - **Production agent, well-funded team** (OpenHands) — the ceiling of what well-engineered agents look like today. Establishes realistic maturity-scale interpretation.
-- **Agent harness with a real MCP surface** (Deep Agents CLI) — keeps the MCP Server Evaluation path (`.mcp.json` discovery → `KB_MCP_SECURITY.md` → minimum-bar checklist → `mcp`-tagged findings) under regression, on a target that also exercises bidirectional calibration (strong opt-in primitives, permissive defaults).
+- **Agent harnesses with a real MCP surface** (Deep Agents CLI, yaah) — keep the MCP Server Evaluation path (`.mcp.json` discovery → `KB_MCP_SECURITY.md` → minimum-bar checklist → `mcp`-tagged findings) under regression, and exercise bidirectional calibration from both ends: Deep Agents CLI is "strong primitives, permissive defaults" (don't over-credit); yaah is "controls genuinely operative" (don't zero them).
 
-A release that produces solid reports on all ten has been validated across the full range of agent postures we've encountered.
+A release that produces solid reports on all eleven has been validated across the full range of agent postures we've encountered.
