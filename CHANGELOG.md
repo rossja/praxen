@@ -9,20 +9,21 @@ All notable changes to Praxa will be recorded here. Format roughly follows [Keep
 
 ---
 
-## [Unreleased]
+## [0.6.0] — 2026-05-12
 
-**Relicensed to Apache-2.0.** Praxa moves from the Exabeam commercial / by-permission license to the [Apache License, Version 2.0](LICENSE) — it's now open source. No functional changes; this is a licensing / metadata release.
+**Relicensed to Apache-2.0.** Praxa moves from the Exabeam commercial / by-permission license to the [Apache License, Version 2.0](LICENSE) — it's now open source. No functional changes to the skill, detection logic, RAISE scoring, Worker Remit structure, or the findings schema (still `"2.0"`); this is a licensing / metadata release. (`praxa_version` bumps `0.5.0` → `0.6.0`.)
 
 ### Changed
 - `LICENSE` — replaced the proprietary "Commercial License — Use by Permission" text with the verbatim Apache License 2.0.
 - Source-file headers — every file's `Copyright © 2026 Exabeam, Inc. All Rights Reserved. / Confidential and Proprietary…` block replaced with the SPDX short form (`Copyright 2026 Exabeam, Inc.` / `SPDX-License-Identifier: Apache-2.0`).
-- `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` — `license` now `"Apache-2.0"` (was `"SEE LICENSE IN LICENSE"`).
-- `report_template.html` / `render.py` — generated reports no longer carry an Exabeam copyright header; the template's license header is now stripped from rendered output (a report is about the analyzed agent, not a work of Exabeam's). The visible report footer keeps the Praxa attribution and the project-sponsor link, and now also shows the repo URL and `Apache-2.0`. Golden fixtures regenerated; `test_render.py` updated accordingly.
-- `README.md` — added a `## License` section.
+- `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` — `license` now `"Apache-2.0"` (was `"SEE LICENSE IN LICENSE"`); version `0.6.0`.
+- `report_template.html` / `render.py` — generated reports no longer carry an Exabeam copyright header; the template's license header is now stripped from rendered output (a report is about the analyzed agent, not a work of Exabeam's), and the document starts cleanly at `<!DOCTYPE html>`. The visible report footer keeps the Praxa attribution and the project-sponsor link, and now also shows the repo URL and `Apache-2.0` (HTML and TXT). Golden fixtures regenerated; `test_render.py` updated accordingly.
+- `README.md` — added a `## License` section. Version strings bumped to `0.6.0` in `README.md`, `PRAXA_SPEC.md`, `docs/installation.md` (and the `praxa_version` example in `SKILL.md`).
 
 ### Added
 - `NOTICE` — Apache-2.0 attribution file; records the project sponsor and the OWASP Gen AI material in `skills/behavior-verifier/knowledge/` used under CC BY-SA 4.0.
 - `CONTRIBUTING.md` — contribution guide; uses the Developer Certificate of Origin (DCO) — commits must be `Signed-off-by`.
+- `.github/workflows/dco.yml` — CI check that fails a pull request if any non-merge commit lacks a `Signed-off-by` trailer matching the author or committer.
 - `build.sh` now includes `LICENSE`, `NOTICE`, `CHANGELOG.md`, and `CONTRIBUTING.md` in the distribution zip.
 
 ## [0.5.0] — 2026-05-11
