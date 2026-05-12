@@ -18,6 +18,21 @@ Praxa is **not just a source-code scanner.** Any artifact that reveals what the 
 
 ---
 
+## Why behavior verification?
+
+The number one risk area for agentic security and safety is simple to state: **the agent doesn't do its job.** A malfunctioning agent, a misaligned agent, an agent that's been adversarially subverted — from the outside they look the same, and what matters in every case is the *behavior*, measured as its deviation from intent.
+
+That's why screening for prompt injections, or scanning code for known-bad patterns, isn't enough. Those are necessary but partial: they catch some inputs and some implementation flaws, not the question that actually matters — *is this agent going to do, or is it doing, the thing it was deployed to do, and nothing else?*
+
+Answering that requires two things Praxa makes first-class:
+
+1. **A wholesale way to define the agent's job** — its mission, authorized tools, approved channels, counterparties, and forbidden actions. That's the **Worker Remit**.
+2. **A way to test reality against that definition** — point Praxa at the agent's code, its live deployment state, or its behavioral history, and get back exactly where observed behavior diverges from declared intent.
+
+Define the job. Test against the job. Everything else in Praxa serves those two steps.
+
+---
+
 ## Documentation
 
 Full docs live in [`docs/`](docs/index.md). Quick links:
@@ -27,6 +42,7 @@ Full docs live in [`docs/`](docs/index.md). Quick links:
 - [Writing Worker Remits](docs/writing-remits.md) — authoring the policy document
 - [Interpreting Reports](docs/interpreting-reports.md) — reading the HTML / JSON / TXT outputs
 - [Challenging and Revising Findings](docs/challenging-findings.md) — what to do when you disagree with the analysis
+- [OWASP Gen AI Security](docs/owasp.md) — the OWASP frameworks Praxa tags findings against
 - [The RAISE Framework](docs/RAISE.md) — the maturity rubric in depth
 
 ---

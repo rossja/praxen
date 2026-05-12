@@ -22,6 +22,7 @@
 | Writing a Worker Remit for an agent | [Writing Worker Remits](writing-remits.md) |
 | Looking at a report and trying to understand it | [Interpreting Reports](interpreting-reports.md) |
 | Disagreeing with a finding or wanting to revise it | [Challenging and Revising Findings](challenging-findings.md) |
+| Trying to understand the OWASP frameworks Praxa tags against | [OWASP Gen AI Security](owasp.md) |
 | Trying to understand the RAISE maturity scoring | [The RAISE Framework](RAISE.md) |
 
 ---
@@ -58,6 +59,8 @@ Every finding Praxa produces is classified against four industry-standard framew
 - **OWASP Top 10 for Agentic AI Applications 2026** — `ASI01`–`ASI10` tags
 - **OWASP Secure MCP Server Development Guide 2026** — applied when MCP configuration is found
 - **RAISE Framework** — six-category 0–5 maturity score; see [RAISE](RAISE.md)
+
+For an overview of the OWASP Gen AI Security Project and a one-line gloss on each LLM, Agentic, and MCP risk, see [OWASP Gen AI Security](owasp.md).
 
 ---
 
