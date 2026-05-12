@@ -191,7 +191,7 @@ When Praxa evaluates an MCP server, use this as the baseline. Any "No" is a find
 
 ## Praxa Analysis Priorities for MCP
 
-When an MCP server or local `.mcp.json` is discovered in the agent's environment:
+When an MCP server configuration is discovered in the agent's environment — a Claude-style `.mcp.json` / `mcp.json`, an agent-platform config (`opencode.json`, `cline_mcp_settings.json`, `.roo/mcp.json`, `.vscode/mcp.json`, `.cursor/mcp.json`, `.copilot/mcp-config.json`, OpenClaw's `openclaw.json`), or any file carrying `mcpServers` / `mcp.servers` definitions regardless of filename:
 
 1. **Immediate checks (Critical severity if failed):**
    - Secrets or tokens in MCP config files

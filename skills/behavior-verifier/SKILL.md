@@ -139,7 +139,8 @@ Using the workspace path from Step 1, discover all artifacts in the agent's work
 |----------|-----------------|
 | Skill / prompt files | `*.md`, `AGENT*.md`, `SYSTEM*.md`, `*_skill.md`, `*_prompt.md`, `CLAUDE.md`, `AGENTS.md` |
 | Code files | `*.py`, `*.js`, `*.ts`, `*.sh` — anything executable |
-| Tool / API definitions | `tools.json`, `mcp.json`, `.mcp.json`, `openapi.yaml`, `functions.json`, any file named `tools*` or `capabilities*` |
+| Tool / API definitions | `tools.json`, `openapi.yaml`, `functions.json`, any file named `tools*` or `capabilities*` |
+| MCP server configs | The Claude-style names — `.mcp.json`, `mcp.json`, `mcp_config.json` — **and the agent-platform config files**: `opencode.json` / `opencode.jsonc` / `.opencode/*.json` (OpenCode), `cline_mcp_settings.json` (Cline), `.roo/mcp.json` (Roo Code), `.vscode/mcp.json` (VS Code), `.cursor/mcp.json` (Cursor), `.copilot/mcp-config.json` (Copilot), `openclaw.json` and legacy `clawdbot.json` (OpenClaw — MCP servers under an `mcp.servers` block). **Content rule (do not rely on filenames alone):** treat *any* JSON / JSONC / TOML / YAML file that contains an `mcpServers` key, an `mcp.servers` or `mcp_servers` section, or a top-level `servers` map whose entries are MCP-shaped (`command` + `args`, or `url` + `type`/`transport`) as an MCP server configuration — regardless of what it's named or which directory it's in — and carry it into the MCP Server Evaluation in Step 6. |
 | Configuration | `*.json`, `*.yaml`, `*.toml`, `*.env*`, `*config*`, `*settings*` |
 | Policy / remit documents | `*remit*`, `*policy*`, `*rules*`, `*boundaries*` |
 | Plugin manifests | `plugin.json`, `manifest.json`, `package.json`, `pyproject.toml`, `requirements.txt`, `Pipfile` |
@@ -382,7 +383,7 @@ For each config file found, check for:
 
 ### MCP Server Evaluation
 
-If any MCP configuration file was found (`.mcp.json`, `mcp.json`, `mcp_config.json`, or similar), load `knowledge/KB_MCP_SECURITY.md` and evaluate against the full MCP minimum bar checklist. Run every item in the checklist. Any "No" is a finding at the severity level specified in the KB.
+If any MCP server configuration was found in Step 4 — a Claude-style `.mcp.json` / `mcp.json` / `mcp_config.json`, an agent-platform config (`opencode.json` / `.opencode/*.json`, `cline_mcp_settings.json`, `.roo/mcp.json`, `.vscode/mcp.json`, `.cursor/mcp.json`, `.copilot/mcp-config.json`, OpenClaw's `openclaw.json` with an `mcp.servers` block), **or any file the content rule flagged as carrying MCP server definitions regardless of filename** — load `knowledge/KB_MCP_SECURITY.md` and evaluate against the full MCP minimum bar checklist. Run every item in the checklist. Any "No" is a finding at the severity level specified in the KB.
 
 Pay particular attention to:
 - Tool descriptions containing instruction-like language (tool poisoning indicator) → **Critical**
