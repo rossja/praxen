@@ -13,6 +13,9 @@ All notable changes to Praxa will be recorded here. Format roughly follows [Keep
 
 **Field-review cheap wins.** Small robustness and clarity fixes from the v0.6.1 field review (one executing-LLM ran the full pipeline against a workspace and wrote up what it hit). No changes to detection logic, RAISE scoring, the Worker Remit structure, or the findings schema (still `"2.0"`).
 
+### Fixed
+- **`.claude-plugin/marketplace.json` — `plugins[0].source` is now `"./"` instead of `"."`** so the marketplace passes the Claude Code schema validator. The bare `"."` form was rejected by `/plugin marketplace add Exabeam/deckard` with `Invalid schema: plugins.0.source: Invalid input`, blocking install. Per the [marketplace docs](https://code.claude.com/docs/en/plugin-marketplaces#relative-paths), relative plugin sources must start with `./`.
+
 ### Changed
 - **`SKILL.md` Step 1 — `date -u` is now the first executable action of the step**, not a code block buried among the variable-naming examples at the end, with an explicit "do not proceed until you have run it" gate and a stated reason (context is frequently wrong; a bad date here produces silently wrong finding IDs with no error). If `date -u` is genuinely unavailable, the skill is told to stop and ask the operator rather than infer.
 - **`SKILL.md` Step 9.9 — the interim-overview print is now framed as a hard gate before Step 10**, not a closing note at the end of the synthesis block ("do not proceed to writing the findings JSON until you have printed this"). The Step 9 intro now calls out 9.9 as a mandatory action rather than a held item. (A field-review run skipped it because its placement read as a closing note.)

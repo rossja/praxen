@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "praxa",
-      "source": ".",
+      "source": "./",
       "description": "Praxa — agent behavior verifier. Compares an agent's declared policy against the available evidence (source, deployment state, or behavioral artifacts); reports where observed behavior diverges from declared intent.",
       "version": "0.6.1",
       "license": "Apache-2.0",
