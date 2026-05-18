@@ -117,14 +117,18 @@ Praxa ships as a Claude Code plugin inside a plugin marketplace. You can install
 
 ### Option A — Install via Claude Code plugin marketplace
 
-From a Claude Code session:
+From your terminal (recommended — works regardless of how your interface handles
+in-session slash commands):
 
-```
-/plugin marketplace add Exabeam/deckard
-/plugin install praxa@exabeam
+```bash
+claude plugin marketplace add Exabeam/deckard
+claude plugin install praxa@exabeam
 ```
 
-That's the install step. The skill is now available as `behavior-verifier`.
+Or run the equivalent slash commands from within a Claude Code session
+(`/plugin marketplace add Exabeam/deckard`, then `/plugin install praxa@exabeam`,
+then `/reload-plugins`). The skill is now available as `behavior-verifier`. See
+[Installation](docs/installation.md) for details and troubleshooting.
 
 ### Option B — Use directly from an unzipped release
 

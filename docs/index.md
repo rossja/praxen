@@ -66,7 +66,7 @@ For an overview of the OWASP Gen AI Security Project and a one-line gloss on eac
 
 ## Quick reference
 
-- Install: `/plugin marketplace add Exabeam/deckard` then `/plugin install praxa@exabeam`
+- Install: `claude plugin marketplace add Exabeam/deckard` then `claude plugin install praxa@exabeam` (or the in-session `/plugin ...` equivalents — see [Installation](installation.md))
 - Skill name: `behavior-verifier`
 - Output directory: `./reports/` relative to where you run the analysis
 - Output files: `<agent>-analysis-<timestamp>.html`, `<agent>-findings-<date>.json`, `<agent>-analysis-<timestamp>.txt`

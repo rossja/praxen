@@ -21,22 +21,48 @@ That's the entire dependency surface.
 
 ## Option A — Install via Claude Code plugin marketplace
 
-This is the recommended path for Claude Code users. From within a Claude Code session:
+This is the recommended path for Claude Code users. There are two equivalent ways
+to run the marketplace commands — they manage the same plugin configuration.
+
+**From your terminal (recommended).** The `claude plugin` subcommand is
+non-interactive and accepts arguments directly, so it works the same regardless
+of how your Claude Code interface handles in-session slash commands:
+
+```bash
+claude plugin marketplace add Exabeam/deckard
+claude plugin install praxa@exabeam
+```
+
+**Or from within a Claude Code session.** Type each as a slash command at the
+prompt:
 
 ```
 /plugin marketplace add Exabeam/deckard
 /plugin install praxa@exabeam
 ```
 
-The skill registers as `behavior-verifier`. Confirm it's available:
+> **If the slash commands don't execute** — i.e. they get sent as an ordinary
+> message instead of running — use the terminal form above instead. The
+> `claude plugin ...` commands are the most reliable path and do exactly the
+> same thing.
 
+The skill registers as `behavior-verifier`. After installing from within a
+session, run `/reload-plugins` (or restart Claude Code) to activate it.
+
+Confirm it's installed:
+
+```bash
+claude plugin list
 ```
-/plugin list
-```
 
-You should see `praxa` (with version `0.6.2` or later).
+You should see `praxa@exabeam` (with version `0.6.2` or later), `enabled`. The
+in-session equivalent is `/plugin list`.
 
-> **Note:** the GitHub repository is currently named `Exabeam/deckard`. The repository rename to match the project name is a separate administrative task. Use the URL above as-is.
+> **Note:** the GitHub repository is currently named `Exabeam/deckard`. The
+> repository rename to match the project name is a separate administrative task.
+> Use the name above as-is — the marketplace itself registers as `exabeam`
+> (defined in the repo's `.claude-plugin/marketplace.json`), which is why the
+> install target is `praxa@exabeam`.
 
 ---
 
@@ -76,9 +102,13 @@ If the renderer step printed `render.py: wrote .../finbot-analysis-...html` and 
 
 ### Plugin marketplace install
 
+```bash
+claude plugin marketplace update exabeam
+claude plugin update praxa@exabeam
 ```
-/plugin update praxa@exabeam
-```
+
+The in-session equivalents are `/plugin marketplace update exabeam` and
+`/plugin update praxa@exabeam`. A restart is required to apply the update.
 
 ### Unzipped release
 
@@ -90,10 +120,14 @@ Download the new release zip and replace the unzipped directory. There is no mig
 
 ### Plugin marketplace install
 
+```bash
+claude plugin uninstall praxa@exabeam
+claude plugin marketplace remove exabeam
 ```
-/plugin uninstall praxa@exabeam
-/plugin marketplace remove Exabeam/deckard
-```
+
+The in-session equivalents are `/plugin uninstall praxa@exabeam` and
+`/plugin marketplace remove exabeam`. Note the marketplace is removed by its
+registered name, `exabeam` — not the `Exabeam/deckard` repo path used to add it.
 
 ### Unzipped release
 
