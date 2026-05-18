@@ -9,6 +9,17 @@ All notable changes to Praxa will be recorded here. Format roughly follows [Keep
 
 ---
 
+## [Unreleased]
+
+**Draft manifest — the synthesis survives a context compaction.** A long scan can exhaust the coding agent's context window and auto-compact mid-analysis; until now that silently degraded the report (findings gathered early get summarized away before the JSON is written). The skill now checkpoints its synthesis to disk before writing the report, so a compacted run is recoverable rather than silently incomplete. Skill-procedure change only — no change to `render.py`, `schema.py`, the findings schema (still `"2.0"`), or any output format.
+
+### Added
+- **`SKILL.md` Step 9.9 now writes a draft manifest** to `./reports/<agent-slug>-draft-<timestamp>.md` — a markdown record of the full synthesis (every finding, the RAISE posture, the remit-coverage audit, positives, log files), complete enough that Step 10's canonical JSON can be rebuilt from it alone. It's written before the report, alongside the existing interim-overview stdout print. Step 10 gained a recovery instruction: if the session compacted (or the synthesis can't be precisely recalled), build the JSON from the manifest rather than from degraded working memory — and an operator resuming a compacted run can point the skill straight at the manifest. This is the partial mitigation for the single-pass "unsupported arc" — the full intermediate-representation refactor is still tracked in [issue #27](https://github.com/Exabeam/deckard/issues/27). Two independent testers had hit the compaction failure (the v0.6.1 field review and a 0.6.2 plugin scan); the manifest converts it from a silent failure into a recoverable one.
+
+### Changed
+- **`docs/usage.md` — "Tips for large workspaces" reworked into "Large workspaces and context sizing"** — why mid-analysis compaction is a *silent* failure, and concrete guidance: use the largest context window available, start a fresh session, scope the input to the agent (not the whole repo). Adds a recovery section: if a run compacts, recover from the draft manifest or re-run.
+- **`PRAXA_SPEC.md` — the "context window pressure" section** now documents the draft-manifest checkpoint as the primary survive-compaction mechanism.
+
 ## [0.6.2] — 2026-05-18
 
 **Plugin-marketplace install fix, plus the v0.6.1 field-review cheap wins.** `/plugin marketplace add Exabeam/deckard` was rejected by the Claude Code marketplace schema validator — `.claude-plugin/marketplace.json` declared the plugin `source` as a bare `"."` where the schema requires a `"./"`-prefixed relative path — so the marketplace-install path silently never worked for any tagged release (the unzip-the-release path was unaffected). 0.6.2 fixes that, and bundles in the small robustness and clarity fixes from the v0.6.1 field review (one executing-LLM ran the full pipeline against a workspace and wrote up what it hit). No changes to detection logic, RAISE scoring, the Worker Remit structure, or the findings schema (still `"2.0"`).

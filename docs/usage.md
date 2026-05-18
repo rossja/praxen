@@ -105,12 +105,24 @@ Because Praxa is stateless and produces deterministic outputs (modulo timestamp)
 
 ---
 
-## Tips for large workspaces
+## Large workspaces and context sizing
 
-Praxa's analysis is read-heavy on the workspace. Two practical tips for large targets:
+A Praxa analysis is read-heavy: it loads the skill procedure, the knowledge bases, and every artifact in the workspace, holds the findings in working memory, and writes the report in a single synthesis pass. On a large target this can exceed the coding agent's context window, and the session **auto-compacts mid-analysis**. That failure is silent — you still get a report, but findings gathered early in the run can be lost or over-summarized by the compaction before the report is written. The goal is to keep the whole scan inside one context window.
 
-1. **Scope the input.** Point Praxa at the agent's *core* directory (often `src/` or the agent code subtree), not the whole repository. Tests, build artifacts, and vendor directories are noise. The Worker Remit defines what's in scope; the input path should match.
-2. **Watch for context-window pressure.** Very large workspaces (50+ artifacts, multi-megabyte configs) can stress the coding agent's context window mid-analysis. Praxa is designed to degrade gracefully — an interim scorecard is printed before the heavy output steps, and the final summary is also written to a `.txt` file so it survives session compression. If a large analysis truncates, the `.txt` and JSON outputs land regardless.
+**To keep a scan inside the window:**
+
+1. **Use the largest context window available.** This is the biggest lever. In Claude Code, run the analysis in the largest-context session you have access to — a 1M-context (Opus) session if you have one. A 200k-class window can compact partway through a non-trivial agent scan once the procedure, knowledge bases, file reads, and synthesis are all resident at once.
+2. **Start a fresh session for the scan.** Don't run Praxa at the tail of a long conversation that has already consumed most of the window — give the analysis the full budget.
+3. **Scope the input to the agent, not the whole repo.** Point Praxa at the agent's core surface — its prompts, skill files, code, config, and the Worker Remit — and leave out what isn't the agent: `node_modules` and vendored dependencies, `.git`, `dist` / `build` output, large data and log files, test fixtures. The Worker Remit defines what's in scope; the input path should match. (Praxa already samples large logs and lockfiles rather than reading them whole — but the cleanest fix is to not hand it the bulk in the first place.)
+
+**If a run compacts anyway:** Praxa checkpoints itself. Just before it writes the report, it saves a **draft manifest** to `./reports/<agent-slug>-draft-<timestamp>.md` — a complete record of the analysis (every finding, the RAISE scores, the remit audit). So if you see the auto-compaction notice during a run, or the final report looks thinner than the interim overview Praxa prints to stdout, you have two recovery options:
+
+- **Recover from the manifest.** Tell the agent: *"the session compacted — read `./reports/<agent-slug>-draft-<timestamp>.md` and finish the report from it."* It rebuilds the findings JSON and re-renders from the checkpoint, without re-analyzing the workspace.
+- **Re-run** the analysis with a tighter scope or a larger context window.
+
+A report produced *through* a mid-synthesis compaction should be treated as possibly incomplete until you've done one of those — not authoritative.
+
+This is guidance, not a guarantee — a genuinely large workspace can still compact even when scoped well. Scoping tighter and giving the run a fresh, large context window is the most reliable thing you can do today; the draft manifest is the safety net for when it compacts regardless.
 
 ---
 

@@ -443,7 +443,7 @@ Praxa produces three artifacts per analysis: a canonical findings JSON (Step 10)
 
 **Write prose with literal characters, not HTML entities.** Use `—`, `&`, `<`, `>`, `'` directly — *not* `&mdash;`, `&amp;`, `&lt;`, `&gt;`, `&#39;`. Literal is cleaner and matches the examples; the renderer will normalise an entity you write by mistake (it un-escapes prose before re-escaping for HTML, so `&mdash;` still renders as `—`), but don't rely on that. The only markup allowed in prose fields is the inline-tag allowlist noted per field below (`<code>`, and for `behavior_summary` also `<p>`/`<strong>`/`<em>`) — everything else, including a stray `<` inside e.g. a version range like `langsmith<1.0.0`, is fine as a literal character and is escaped safely.
 
-Synthesize 9.1–9.8 now, in order, and hold them in working memory. Then **9.9 is a mandatory action, not a held item** — you print the interim overview to stdout before you write anything in Step 10.
+Synthesize 9.1–9.8 now, in order, and hold them in working memory. Then **9.9 is a mandatory action, not a held item** — you write the draft manifest to disk and print the interim overview before you write anything in Step 10. The draft manifest is what lets the analysis survive a context-window compaction during a long scan; do not skip it.
 
 ### 9.1 Agent Remit summary (intro band — left block) → `intro_band.agent_remit_summary`
 
@@ -515,14 +515,33 @@ For each confirmed positive from Step 8: a `title` (short), a `description` (one
 
 If you found log files in Step 4: set `present` to true and, for each, record `path`, `source` (the component that writes it), `content_type` (e.g., "structured JSON lines", "plaintext", "agent decision log"), `purpose` (what it captures), `mtime` (last-modified as you observed it — a date or `"unknown"`), and `status` (`active` if recently written, `new` if it looks freshly created this run). If you found none: set `present` to false, leave `rows` empty, and write a one-sentence `no_logs_note` — and if the absence of logging is itself a finding (it usually is for Monitor Continuously), say so and cite the finding ID.
 
-### 9.9 Print an interim overview to stdout NOW — gate before Step 10
+### 9.9 Write the draft manifest, then print the interim overview — gate before Step 10
 
-This is a hard gate, not a closing note. **Do not proceed to writing the findings JSON in Step 10 until you have printed this block to stdout.** It exists so the operator still sees the synthesis if the session is truncated before the final summary — which is a real risk in long scans, and the only protection against losing the whole analysis. Print it now:
+This is a hard gate, not a closing note. **Do not proceed to Step 10 until you have done both halves of this step.** A long scan can exhaust the context window and auto-compact somewhere between here and the finished report; this step is what makes the analysis survive that — without it, a compaction silently discards the synthesis and the report is rebuilt from degraded memory.
+
+**First — write the draft manifest.** Write everything you synthesized in 9.1–9.8 to a markdown file at:
+
+```
+./reports/<agent-slug>-draft-<TIMESTAMP>.md
+```
+
+(Agent slug and `$TIMESTAMP` from Step 1.) This is a working artifact, not a deliverable — it does not need to validate against any schema. It must, however, be **complete enough that Step 10's canonical JSON could be written from this file alone, with no reliance on working memory.** Under clear markdown headings, include:
+
+- Agent name, slug, `praxa_version` (from `.claude-plugin/plugin.json`), `$SCAN_DATE`, `$SCAN_TS`, workspace path, artifact count — everything Step 10's `scan` block and version fields need, since `$SCAN_TS` in particular cannot be regenerated after a compaction.
+- The Agent Remit summary (9.1) and Agent Structure summary (9.2).
+- The Behavior Summary narrative (9.3).
+- The six RAISE category scores, confidences, and rationales, plus the weighted overall and its rationale (9.4–9.5).
+- The full Remit Coverage audit (9.6) — every rule: id, section, verbatim rule text, status, linked finding id.
+- **Every finding** — for each: id, severity, summary, description (if any), tags, policy rule ids and text, every evidence item (`file:line — snippet`, or `file — snippet` when the line is null), recommended actions, RAISE category, OWASP codes, confidence, related findings, escalation.
+- The positives (9.7) and the log-file inventory (9.8).
+
+**Then — print the interim overview to stdout**, so the operator sees the synthesis even if the session is truncated before the final summary:
 
 ```
 Praxa — interim behavior analysis overview
 Agent:    [agent name]
 Artifacts read: [count]
+Draft manifest: ./reports/<agent-slug>-draft-<TIMESTAMP>.md
 
 Behavior Summary:
   [the 2–4 sentence narrative from 9.3, wrapped to readable width]
@@ -538,7 +557,9 @@ RAISE Posture:
 Weighted Overall: [score] / 5.0
 Findings so far: [N Critical] [N High] [N Medium] [N Low] [N Informational]
 
-Writing the findings JSON and rendering the report...
+Synthesis is checkpointed to the draft manifest above. If this session
+compacts before the report is finished, re-read that file (and this skill)
+and continue from Step 10. Writing the findings JSON and rendering now...
 ```
 
 ---
@@ -552,6 +573,8 @@ Write a single JSON file — the canonical record of this analysis — to:
 ```
 
 (Use the agent slug and `$SCAN_DATE` from Step 1; do not regenerate the date.)
+
+**If the session compacted during this scan** — or you otherwise cannot fully and precisely recall the synthesis from Steps 4–9 — do not reconstruct it from memory and do not re-read the whole workspace. Read the draft manifest you wrote in Step 9.9 (`./reports/<agent-slug>-draft-<TIMESTAMP>.md`) and build the canonical JSON from it. The manifest is the authoritative record of this analysis; post-compaction working memory is not. (If the operator is resuming a compacted run, they may point you straight at the manifest — same instruction: build Step 10 from the file.)
 
 This file is the **complete behavioral record**: everything the HTML report shows is derived from it by `render.py`, and it is also what downstream consumers (dashboards, ticketing, compliance pipelines) ingest. Use exactly this shape. Every field is required unless the comment says it may be null or empty:
 
@@ -694,6 +717,7 @@ Files written:
   Report:   ./reports/<agent-slug>-analysis-<TIMESTAMP>.html
   Findings: ./reports/<agent-slug>-findings-<YYYY-MM-DD>.json
   Summary:  ./reports/<agent-slug>-analysis-<TIMESTAMP>.txt
+  Draft:    ./reports/<agent-slug>-draft-<TIMESTAMP>.md  (Step 9.9 checkpoint; working artifact, safe to delete)
 ```
 
 That is the end of the analysis. (The summary file already exists on disk regardless of session state — if stdout is truncated, the operator still has it.)

@@ -419,12 +419,13 @@ Praxa does not ship a scheduler. If recurring scans are desired, wrap the Claude
 
 ### Context window pressure on large workspaces
 
-An analysis over a large workspace — archived or snapshotted projects, multi-directory trees, 50+ artifacts — can consume enough context that the Claude Code session compresses mid-analysis. Praxa is designed to degrade gracefully:
+An analysis over a large workspace — archived or snapshotted projects, multi-directory trees, 50+ artifacts — can consume enough context that the Claude Code session auto-compacts mid-analysis. Compaction during synthesis is a *silent* failure: a report is still produced, but findings gathered early in the run can be lost or over-summarized before the canonical JSON is written. Praxa is built to survive that:
 
-- An **interim overview** (behavior summary, RAISE posture, finding counts) is printed to stdout at the end of Step 9 — before any file is written — so the operator sees the synthesis even if the session later truncates.
+- Before the report is written (Step 9.9), Praxa checkpoints the full synthesis — every finding, the RAISE posture, the remit audit — to a **draft manifest** at `./reports/<agent-slug>-draft-<timestamp>.md`. If the session compacts, Step 10 rebuilds the canonical findings JSON from the manifest rather than from degraded working memory, and an operator resuming a compacted run can point the skill straight at the manifest to recover. The manifest is a working artifact — no schema, not a deliverable.
+- The same Step 9.9 prints an **interim overview** (behavior summary, RAISE posture, finding counts) to stdout — before any file is written — so the operator sees the synthesis even if the session later truncates.
 - Rendering the report is a **deterministic Python step (Step 11)**, not LLM work — it doesn't compete for the context window, runs in well under a second, and writes the `.txt` summary to `./reports/` alongside stdout, so the summary survives even if terminal output is lost.
 
-If you're analyzing a large archive and want to minimize context pressure, analyze one subdirectory at a time and diff the findings JSON files afterward.
+The draft manifest makes a compacted run recoverable; it does not prevent compaction. The most reliable way to minimize context pressure is still to scope the input to the agent's own surface (not the enclosing repo) and run in the largest available context window — see `docs/usage.md`, "Large workspaces and context sizing". For a genuinely large archive, analyze one subdirectory at a time and diff the findings JSON files afterward.
 
 ---
 
