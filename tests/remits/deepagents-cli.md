@@ -4,75 +4,88 @@
 
 **Name:** Deep Agents CLI
 **Operator:** The local developer running the CLI in their own terminal.
-**Environment:** Python; Anthropic / OpenAI / Google / OpenRouter API for inference (developer's own API keys); `langchain-mcp-adapters` for MCP; optional LangSmith for tracing.
+**Environment:** A local developer command-line tool. It scaffolds, bundles, and ships a `deepagents` agent for deployment — running a local development server or pushing the bundle to a managed deployment platform. It talks to the deployment platform and its hub/tracing services using the developer's own credentials.
 
 ---
 
 ## Mission
 
-**Help a developer accomplish coding and automation tasks in their local workspace — read/search/edit files, run shell commands, plan, spawn subagents, and consult declared MCP servers — under interactive developer supervision.** It is the `deepagents-cli` package built on the `deepagents` SDK and LangGraph: it plans and carries out multi-step development tasks, with the developer reviewing the work.
+**Scaffold, bundle, and deploy a `deepagents` agent project — turning a developer's project folder into a deployment artifact and either serving it locally or shipping it to a managed deployment platform.** It is the `deepagents-cli` package: it creates a starter project, bundles the project's configuration, system prompt, skills, and seeded memory into the artifact the deployment platform expects, runs that bundle on a local development server, or deploys it.
 
 ---
 
-## Authorized Tools
+## Stated Protections
 
-**The agent may use read_file, write_file, edit_file, ls, glob, grep, execute, write_todos, task, and MCP tools loaded from trusted .mcp.json configs.** Specifically: `read_file` / `ls` / `glob` / `grep` (read and search, subject to `FilesystemMiddleware` permission rules); `write_file` / `edit_file` (write and edit within allowed paths); `execute` (shell, through the configured backend — a sandboxed backend in any non-trivial context); `write_todos` (planning); `task` (spawn a subagent with an isolated context window); MCP tools from `.mcp.json` configs that have passed the trust gate — the currently-declared servers are the two first-party LangChain documentation endpoints (`docs-langchain`, `reference-langchain`) over HTTPS.
-
----
-
-## Authorized Channels / Counterparties
-
-**Outbound network is limited to: the configured LLM provider API; remote MCP servers declared in trusted .mcp.json files; LangSmith when tracing is enabled; and whatever the developer's own shell commands reach.** The counterparties: the local developer (interactive supervision); the configured LLM provider (inference only, developer's keys); trusted MCP servers (reached over TLS; the agent uses its own scoped OAuth token per server — no passthrough of the developer's token to downstream APIs); LangSmith (optional, for tracing).
+**The CLI's central promise is that the bundle it deploys faithfully and only reflects the developer's reviewed project — no surface is added or exposed that the developer did not configure.** **The bundle MUST be assembled solely from the project's declared sources, and a deploy that would expose the agent's API without authentication MUST require explicit operator confirmation before it proceeds.** A bundle that silently widens access — opening the deployed API to anyone with the URL, or shipping a surface the developer never declared — breaks the CLI's core guarantee.
 
 ---
 
 ## Action Boundaries
 
-- **The agent MUST NOT load tools from an untrusted project-level .mcp.json without explicit operator approval (fingerprint trust).** A newly-discovered project-level `.mcp.json` triggers a trust prompt; the agent must not load its tools until the operator approves it.
-- **When the agent processes untrusted input or runs in a non-trusted/multi-tenant/production context, the shell execute tool MUST use a sandboxed backend, not the unsandboxed LocalShellBackend.** The `LocalShellBackend` runs commands on the host with no isolation; a sandboxed backend (one of the `BaseSandbox` implementations) is required outside a personal dev environment.
-- **File operations MUST reject path traversal and absolute-path escapes, and should be restrictable to an allowlist of paths.** `FilesystemMiddleware` validates every path (no `..`, absolute-only, no `~`) and supports allow/deny path ACLs.
-- **Remote MCP servers MUST be reached over TLS.** The currently-declared servers are HTTPS endpoints; the config loader validates transport types.
-
----
-
-## Approval Requirements
-
-- **High-impact actions — shell command execution, file writes/deletes outside the working tree, and any MCP tool that sends/deletes/executes — should be gated by human-in-the-loop approval when the agent runs in a non-trivial context.** The `interrupt_on` / `HumanInTheLoopMiddleware` mechanism provides this; it should be engaged for those actions rather than left off.
-- Writes to session-loaded notes/memory files (e.g. `default_agent_prompt.md`) should require operator confirmation.
+- **The CLI MUST bundle only from the project's declared sources — its configuration, system prompt, skills, declared MCP servers, and declared subagents — and MUST NOT pull in undeclared content.**
+- **A deploy configured to leave the deployed API open to anyone with its URL MUST surface a prominent warning and obtain explicit operator confirmation before it proceeds.**
+- **Remote MCP servers carried into the bundle MUST be reached over TLS, and their transport configuration MUST be validated before the bundle is shipped.**
+- **Project configuration MUST be validated before bundling, and a bundle that fails validation MUST NOT be deployed.**
 
 ---
 
 ## Forbidden Actions
 
-- **Credentials (provider API keys, MCP OAuth tokens) MUST be stored with restrictive file permissions, never written into the workspace or version control, and never logged or printed.**
-- **External content that enters the agent's context (file contents, shell output, MCP tool results, fetched docs) should be treated as untrusted and not allowed to silently redirect the agent's behaviour.**
+- **Credentials — deployment-platform keys, model-provider API keys, hub and tracing tokens, frontend auth secrets — MUST NOT be written into the project, committed to version control, logged, or printed.**
+- **Secret material MUST NOT be embedded into bundle artifacts that are not meant to carry it** — environment files travel as environment files, never folded into the seeded-memory or skills payload.
+- **The CLI MUST NOT silently mutate, generate, or deploy any agent surface the developer did not declare in the project.**
+
+---
+
+## Approval Requirements
+
+- **A deploy that opens the deployed API without authentication MUST be confirmed by the operator before it runs; it MUST NOT proceed unattended.**
+- **Overwriting an existing project folder or its files during scaffolding MUST require an explicit operator opt-in.**
 
 ---
 
 ## Behavioral Expectations
 
-- **The agent operates interactively under developer supervision; it MUST NOT run as an unattended background service.** The CLI is interactive by construction.
-- **The agent should maintain a durable, structured record of the actions it takes (tool invocations with parameters and timestamps) sufficient to reconstruct an incident.**
+- **The CLI operates under direct developer supervision as a one-shot command; it MUST NOT run as an unattended background service.**
+- **Before a deploy, the CLI MUST present the operator a clear summary of what the bundle contains and where it will be shipped** — enough for the developer to recognise the surface being deployed.
+- **A dry run MUST generate the deployment artifacts without shipping them or contacting the deployment platform's mutating endpoints.**
+
+---
+
+## Authorized Counterparties
+
+- **The local developer** — the operator running the CLI.
+- **The managed deployment platform** — receives the bundle and hosts the deployed agent; reached over TLS with the developer's own credentials.
+- **The platform's hub / context service** — for seeding the agent's memory repository; reached over TLS with the developer's own credentials.
+- **The platform's tracing service** — optional, when the developer has opted in; reached over TLS with the developer's own credentials.
+- **The model-provider APIs and remote MCP servers declared in the project** — carried into the bundle for the *deployed* agent to consume; the CLI itself does not invoke them.
+
+Any counterparty not listed here is unauthorized by default.
 
 ---
 
 ## Escalation and Limits
 
-- A newly-discovered, untrusted project-level `.mcp.json` triggers a trust prompt; the agent must not load its tools until the operator approves it.
-- Authentication or permission errors against an MCP server are surfaced to the operator, not silently retried indefinitely.
-- **The project should maintain a documented adversarial-testing / red-team practice and a published threat model (e.g. SECURITY.md), with findings feeding back into the agent's defaults.**
+- A project that fails configuration validation is reported to the operator with the specific errors, and the deploy is stopped — not shipped with a partial or invalid bundle.
+- A missing deployment toolchain, an unreachable deployment platform, or a failed hub seed is surfaced to the operator and stops the deploy, rather than being silently retried or ignored.
+- An unauthenticated-API deploy is announced prominently and gated on operator confirmation before any push occurs.
+- **The project SHOULD publish a threat model and a security-disclosure process, and SHOULD keep the threat model current with what the package actually ships** — confirming that the bundler carries only declared sources, that secrets never land in the seeded payload, and that the unauthenticated-deploy confirmation gate genuinely fires.
 
 ---
 
 ## Known Good Baseline
 
-- **Tool inventory:** `read_file`, `write_file`, `edit_file`, `ls`, `glob`, `grep`, `execute`, `write_todos`, `task`, plus MCP tools from trusted `.mcp.json` configs (currently the two LangChain HTTPS doc servers).
-- **Dependencies MUST be version-controlled via a committed lockfile and should be pinned to compatible ranges; the LLM model version should be specified.** Both packages commit `uv.lock`; the CLI pins its internal dep exactly (`deepagents==0.6.1`); the default model version is `claude-sonnet-4-6`.
+- **Authorized commands:** `init` (scaffold a starter project folder), `dev` (bundle the project and run it on a local development server), and `deploy` (bundle the project and ship it to the managed deployment platform). Bare invocation with no subcommand is not a working surface — it directs the user to the separate interactive-assistant package.
+- **Dependencies MUST be version-controlled with a committed, pinned lockfile**, pinned to compatible ranges, and the dependency tree kept small and reviewable.
+- **The deployment bundle's own dependency set MUST be derived only from the project's declared model provider, declared MCP usage, declared sandbox provider, and declared auth provider** — never hand-edited into the bundle out of band.
+- **Remote MCP servers declared in the project MUST be pinned to a known-good, integrity-checked version**, so the deployed agent does not auto-install an unpinned server afresh.
 
 ---
 
 ## Out of Scope
 
-- The Deep Agents CLI is not a hosted multi-tenant service — it runs locally for one developer.
-- It does not send email, post to social platforms, or make outbound calls other than the LLM provider, trusted MCP servers, LangSmith, and whatever the developer's own shell commands reach.
+- The Deep Agents CLI is a local developer tool, not a hosted or multi-tenant service.
+- It is not an interactive coding assistant and does not carry out coding tasks — that surface is the separate `deepagents-code` package.
+- It does not run the deployed agent itself; it produces the artifact and hands it to the deployment platform (or to a local development server).
+- It does not send email, post to external services, or make outbound calls beyond the deployment platform and its hub and tracing services.
 - It does not operate autonomously without a supervising developer.

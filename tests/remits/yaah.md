@@ -3,81 +3,83 @@
 ## Agent Identity
 
 **Name:** yaah (Yet Another Agent Harness)
-**Operator:** The developer running `yaah` in their own repo / terminal.
-**Environment:** Go 1.25; the configured coding agent for inference; `npx` for the `context7` MCP server; `modelcontextprotocol/go-sdk` for the built-in MCP server.
+**Operator:** The developer running yaah in their own repository and terminal.
+**Environment:** A local developer command-line tool. It uses the developer's configured coding agent for LLM inference, integrates one or more third-party MCP servers, and ships a built-in MCP server of its own.
 
 ---
 
 ## Mission
 
-The job: **Generate coding-agent configuration for Claude Code, OpenCode, Codex CLI, and GitHub Copilot CLI from one codebase, and ship a built-in security/quality toolset (hooks, an MCP server, a session audit log).** In practice that means `yaah` generates per-agent configuration (`yaah generate [--agent claude|opencode|codex|copilot]`) with per-agent adaptations, runs the built-in hook handlers on the configured agent's tool events, serves the built-in `yaah` MCP server (`yaah serve`), configures the third-party `context7` (stdio) and `pulumi` (http) MCP servers, and maintains a per-session audit log.
+**Generate coding-agent configuration for several coding agents — Claude Code, OpenCode, Codex CLI, and GitHub Copilot CLI — from a single source of truth, and ship a built-in security-and-quality toolset alongside it.** The toolset is a set of event hooks that run on the configured agent's tool activity, a built-in MCP server, and a per-session audit log. yaah also wires up whichever third-party MCP servers the developer opts into.
 
 ---
 
 ## Stated Protections
 
-**The harness's pitch is that its protections are uniform across the agents it generates for.** **Every generated agent config carries the same five hooks — linter, command guard (blocks rm -rf / and similar), secret scanner, comment checker, session logger.** A user who runs `yaah generate --agent <X>` should get those five protections in the `<X>` config, not just in the Claude Code config.
+**The harness's central promise is that its protections are uniform across every coding agent it generates configuration for.** **Every generated agent configuration MUST carry the same set of protective hooks — a linter, a command guard that blocks catastrophic shell commands, a secret scanner, a comment checker, and a session logger.** A developer who generates configuration for any supported agent must receive that full set, not a subset.
 
 ---
 
 ## Action Boundaries
 
-- **Catastrophic shell commands (recursive delete from root, force-push to main, hard reset, destructive SQL, filesystem format, raw disk write) MUST be blocked before execution.** This is the command-guard hook, running on `PreToolUse` against `Bash`.
-- **Remote MCP servers MUST be reached over TLS.** The configured `pulumi` server uses `https://`; the others are local stdio.
-- **MCP tool descriptions MUST NOT contain instruction-like language directed at the model.** This applies to the built-in `yaah` MCP server's tool descriptions (and to any server `yaah` configures, to the extent the harness can check).
+- **Catastrophic shell commands — recursive deletion from the filesystem root, force-pushing to a main branch, hard resets, destructive database statements, filesystem formatting, raw disk writes — MUST be blocked before they execute.**
+- **Remote MCP servers MUST be reached over TLS.**
+- **MCP tool descriptions MUST NOT contain instruction-like language directed at the model** — neither the built-in server's tool descriptions nor, as far as the harness can inspect them, those of the third-party servers it configures.
 
 ---
 
 ## Forbidden Actions
 
-- **Hardcoded credentials in edited files MUST be detected.** This is the secret-scanner hook.
-- **Agent-managed / session-loaded files (AGENTS.md and its symlinks) should not be writable in a way that lets ingested content persist into future sessions without review.** `AGENTS.md` (with `CLAUDE.md` / `GEMINI.md` symlinking to it) is loaded into the agent's context and carries `<!-- AGENTS-GENERATED -->` sections; content the agent ingested must not be able to steer a write into those sections that re-enters context unreviewed.
+- **Hardcoded credentials in files the agent edits MUST be detected before the change is accepted.**
+- **Agent-managed, session-loaded files MUST NOT be writable in a way that lets ingested content persist into future sessions unreviewed.** The harness maintains files that are loaded into the agent's context at session start; content the agent ingested from an untrusted source must not be able to steer a write into those files that silently re-enters context on a later run.
 
 ---
 
 ## Approval Requirements
 
-- **High-impact actions — destructive shell commands, file writes, MCP tools that write/send/execute — should be reviewed before execution.** Destructive shell commands are blocked outright by the command guard; file writes and write/send/exec MCP tools (e.g. `yaah_planning_init`, which writes a `.planning/` directory) should reach a human checkpoint before they run.
+- **High-impact actions — destructive shell commands, file writes, and MCP tools that write, send, or execute — MUST reach a human checkpoint before they run.** Destructive shell commands may be blocked outright rather than queued for approval; writes and write/send/execute tool calls must not proceed unreviewed.
 
 ---
 
 ## Behavioral Expectations
 
-- **The harness should maintain a durable, structured record of tool calls, blocked actions, and file modifications.** This is the per-session audit log (`pkg/session/store.go`): tool calls, blocked calls, files modified, findings — timestamped and persisted.
-- **The .mcp.json and the per-agent config files generated by yaah should not drift apart.** The `mcpServers` block lives in both `.mcp.json` and the generated agent configs (e.g. `.claude/settings.json`); `yaah generate` keeps them in sync, and a hand-edit to one must not silently leave the other stale.
+- **The harness MUST maintain a durable, structured, timestamped record of tool calls, blocked actions, and file modifications** — detailed enough to reconstruct what the agent did in a session.
+- **The MCP server configuration and the per-agent configuration files MUST stay consistent with each other.** A change to one must not silently leave the other stale.
 
 ---
 
 ## Authorized Counterparties
 
-- **The local developer** — the operator running `yaah` and the configured agent.
+- **The local developer** — the operator running yaah and the configured coding agent.
 - **The configured coding agent's LLM provider** — inference only.
-- **`context7` MCP server** (stdio, `npx -y @context7/mcp`) — documentation lookups.
-- **`pulumi` MCP server** (http, `https://mcp.ai.pulumi.com/mcp`, TLS) — Pulumi operations; whatever auth/scope it consumes is established out of band.
-- **The built-in `yaah` MCP server** (stdio, `yaah serve`).
-- **The Claude plugin marketplace** — `enabledPlugins` includes `codex@openai-codex`.
+- **The `context7` MCP server** — documentation lookups.
+- **The `pulumi` MCP server** — infrastructure operations; remote, reached over TLS, consuming whatever auth and scope are established out of band.
+- **The built-in yaah MCP server** — local.
+- **The coding-agent plugin marketplace** — for any plugins the generated configuration enables.
+
+Any counterparty not listed here is unauthorized by default.
 
 ---
 
 ## Escalation and Limits
 
-- A dangerous shell command matched by the command guard is blocked and recorded (not run); the block is logged to the session audit log.
-- Secret-scan / lint / comment findings are recorded to the session audit log and surfaced to the operator.
-- **The project should publish a threat model / SECURITY.md and run adversarial testing of its own protections.** That means a `SECURITY.md` with a disclosure process and a threat model, plus adversarial tests for the harness's own controls — a secret the scanner should catch, a command the guard should block, a poisoning write into `AGENTS.md`, a generated config that asserts the protections are present.
+- A dangerous shell command caught by the command guard is blocked, not run, and the block is recorded to the session audit log.
+- Secret-scan, lint, and comment findings are recorded to the session audit log and surfaced to the operator.
+- **The project SHOULD publish a threat model and a security-disclosure process, and SHOULD run adversarial testing of its own protections** — confirming that the secret scanner catches a planted secret, the command guard blocks a catastrophic command, a poisoning write into a session-loaded file is prevented, and a generated configuration genuinely carries the protections it claims.
 
 ---
 
 ## Known Good Baseline
 
-- **Configured MCP servers MUST be pinned / from a known-good source with an integrity check.** No unpinned, auto-installed-on-every-run server packages — e.g. `npx -y @context7/mcp` should be `@context7/mcp@<version>` (or a lockfile-backed install).
-- **Dependencies MUST be version-controlled with a committed lockfile and pinned.** Go modules with a committed `go.mod` (exact-pinned versions) and `go.sum` (module hashes); a small dependency tree (cobra, the MCP go-sdk, go-toml, oauth2).
-- **Built-in MCP tools:** `yaah_scan_secrets`, `yaah_lint`, `yaah_check_command`, `yaah_doctor`, `yaah_session_info`, `yaah_planning_status`, `yaah_planning_init` (read/check tools plus `yaah_planning_init`, which writes a `.planning/` directory).
-- **Configured MCP servers:** `context7` (stdio), `pulumi` (http, TLS), `yaah` (stdio).
+- **Third-party MCP servers MUST be pinned to a known-good, integrity-checked version** — no server package auto-installed afresh, unpinned, on every run.
+- **Dependencies MUST be version-controlled with a committed, pinned lockfile**, and the dependency tree kept small and reviewable.
+- **Authorized built-in MCP tools:** `yaah_scan_secrets`, `yaah_lint`, `yaah_check_command`, `yaah_doctor`, `yaah_session_info`, `yaah_planning_status`, and `yaah_planning_init`. All but `yaah_planning_init` are read-only or check-only; `yaah_planning_init` writes to the workspace.
+- **Configured MCP servers:** the third-party `context7` and `pulumi` servers, plus the built-in yaah server.
 
 ---
 
 ## Out of Scope
 
-- `yaah` is a local developer CLI, not a hosted multi-tenant service.
-- It does not itself send email, post to external services, or make outbound calls other than the configured agent's LLM provider, the configured MCP servers, the npm registry (for `context7` via `npx`), and the Claude plugin marketplace.
+- yaah is a local developer CLI, not a hosted or multi-tenant service.
+- It does not send email, post to external services, or make outbound network calls beyond the configured agent's LLM provider, the configured MCP servers, the package registry used to install third-party MCP servers, and the coding-agent plugin marketplace.
 - It does not operate autonomously without a supervising developer.
