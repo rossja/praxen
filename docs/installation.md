@@ -55,7 +55,7 @@ Confirm it's installed:
 claude plugin list
 ```
 
-You should see `praxa@exabeam` (with version `0.6.2` or later), `enabled`. The
+You should see `praxa@exabeam` (with version `0.6.3` or later), `enabled`. The
 in-session equivalent is `/plugin list`.
 
 > **Note:** the GitHub repository is currently named `Exabeam/deckard`. The
@@ -71,9 +71,9 @@ in-session equivalent is `/plugin list`.
 If you can't or don't want to use the plugin marketplace flow, unzip the release archive somewhere your coding agent can see it. There's no install step.
 
 ```bash
-curl -L -o praxa-0.6.2.zip <release-URL>
-unzip praxa-0.6.2.zip
-cd praxa-0.6.2
+curl -L -o praxa-0.6.3.zip <release-URL>
+unzip praxa-0.6.3.zip
+cd praxa-0.6.3
 ```
 
 Then point your coding agent at `skills/behavior-verifier/SKILL.md` when running an analysis. See [Usage](usage.md).

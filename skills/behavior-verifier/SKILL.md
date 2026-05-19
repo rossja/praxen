@@ -581,7 +581,7 @@ This file is the **complete behavioral record**: everything the HTML report show
 ```json
 {
   "schema_version": "2.0",
-  "praxa_version": "0.6.2",
+  "praxa_version": "0.6.3",
   "scan": {
     "agent": "<agent name>",
     "agent_slug": "<agent-slug>",
