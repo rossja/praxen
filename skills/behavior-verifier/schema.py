@@ -252,8 +252,18 @@ def _validate_findings(data):
             _obj(tag, tp)
             _enum(tag, "kind", tp, TAG_KINDS)
             _nonempty_str(tag, "label", tp)
-        _nonempty_str(f, "policy_rule_ids", p)
-        _nonempty_str(f, "policy_rule_text", p)
+        # policy_rule_ids / policy_rule_text are null together when the finding
+        # does not trace to a specific remit rule (a RAISE-category or
+        # detection-pattern finding), and non-empty strings together when it does.
+        pri = _str(f, "policy_rule_ids", p, allow_none=True)
+        if pri is not None and not pri.strip():
+            _err(f"{p}.policy_rule_ids", "must be a non-empty string or null")
+        prt = _str(f, "policy_rule_text", p, allow_none=True)
+        if prt is not None and not prt.strip():
+            _err(f"{p}.policy_rule_text", "must be a non-empty string or null")
+        if (pri is None) != (prt is None):
+            _err(p, "policy_rule_ids and policy_rule_text must both be set or both be "
+                    "null (a finding either cites a remit rule or it does not)")
         ev = _list(f, "evidence", p, min_len=1)
         for j, item in enumerate(ev):
             ip = f"{p}.evidence[{j}]"

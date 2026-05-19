@@ -268,8 +268,24 @@ def _finding_tag_ctx(tag, _idx):
     return {"TAG_CLASS": _TAG_CLASS[tag["kind"]], "TAG_LABEL": esc(tag["label"])}
 
 
-def _expand_finding_tags(block, finding):
-    return expand_repeat(block, "finding_tag", finding["tags"], _finding_tag_ctx)
+def _policy_ctx(finding, _idx):
+    return {
+        "RULE_IDS": esc(finding["policy_rule_ids"]),
+        "QUOTED_RULE_TEXT": esc(finding["policy_rule_text"]),
+    }
+
+
+def _expand_finding_inner(block, finding):
+    """Expand the nested REPEAT blocks of a finding card.
+
+    `finding_tag` repeats once per tag. `finding_policy` is a 0-or-1 block: it
+    survives for a finding that cites a remit rule and is dropped for one whose
+    `policy_rule_ids` is null (a RAISE-category / detection-pattern finding)."""
+    block = expand_repeat(block, "finding_tag", finding["tags"], _finding_tag_ctx)
+    has_rule = finding["policy_rule_ids"] is not None
+    block = expand_repeat(block, "finding_policy",
+                          [finding] if has_rule else [], _policy_ctx)
+    return block
 
 
 def _finding_ctx(finding, _idx):
@@ -279,8 +295,6 @@ def _finding_ctx(finding, _idx):
         "SEVERITY_LABEL": _SEV_LABEL[finding["severity"]],
         "FINDING_ID": esc(finding["id"]),
         "FINDING_SUMMARY": esc(finding["summary"]),
-        "RULE_IDS": esc(finding["policy_rule_ids"]),
-        "QUOTED_RULE_TEXT": esc(finding["policy_rule_text"]),
         "EVIDENCE": _format_evidence(finding["evidence"]),
         "RECOMMENDED_ACTION": _format_recommended_actions(finding["recommended_actions"]),
     }
@@ -407,7 +421,7 @@ def render_html(template: str, data: dict) -> str:
         tpl = expand_repeat(tpl, "log_row", data["log_files"]["rows"], _log_row_ctx)
     tpl = expand_repeat(tpl, "remit_row", data["remit_coverage"]["rules"], _remit_row_ctx)
     findings_sorted = sorted(data["findings"], key=lambda f: _SEV_RANK[f["severity"]])  # stable
-    tpl = expand_repeat(tpl, "finding", findings_sorted, _finding_ctx, inner=_expand_finding_tags)
+    tpl = expand_repeat(tpl, "finding", findings_sorted, _finding_ctx, inner=_expand_finding_inner)
     tpl = expand_repeat(
         tpl, "positive", data["positives"], _positive_ctx,
         empty_replacement='<div class="none-found">No confirmed positive controls '

@@ -256,6 +256,25 @@ def main():
     check("multi-item recommended_actions renders as a <ul> with inline <code> preserved",
           "<ul><li>" in sh and "<code>code</code>" in sh and "Second action." in sh)
 
+    # 4d-bis. A finding with null policy_rule_ids/policy_rule_text (a RAISE-category
+    #         or detection-pattern finding that does not trace to a remit rule)
+    #         validates and renders — its finding card simply omits the policy-ref.
+    norule = json.loads(json.dumps(data))
+    norule["findings"][0]["policy_rule_ids"] = None
+    norule["findings"][0]["policy_rule_text"] = None
+    norule_path = os.path.join(tmp, "norule.json")
+    norule_html = os.path.join(tmp, "norule.html")
+    dump_json(norule_path, norule)
+    r = run_render(["--findings", norule_path, "--template", TEMPLATE,
+                    "--out-html", norule_html, "--out-txt", os.path.join(tmp, "norule.txt")])
+    nh = text_or_empty(norule_html)
+    # every fixture finding cites a rule, so the policy-ref count drops by exactly
+    # one when a single finding's policy fields are nulled.
+    check("null policy_rule_ids/text validates and renders; the policy-ref is dropped for that finding",
+          r.returncode == 0
+          and nh.count('class="policy-ref"') == len(data["findings"]) - 1,
+          r.stderr.strip())
+
     # 4e. The published JSON-Schema doc and the Python validator agree on enum values.
     sch_path = os.path.join(SKILL_DIR, "findings.schema.json")
     js = load_json(sch_path)
@@ -311,6 +330,10 @@ def main():
              lambda d: d["findings"][0].__setitem__("owasp_agentic", "bananas"))
     negative("rejects a finding that lists its own id in related_findings",
              lambda d: d["findings"][0].__setitem__("related_findings", [d["findings"][0]["id"]]))
+    negative("rejects policy_rule_ids null while policy_rule_text is set",
+             lambda d: d["findings"][0].__setitem__("policy_rule_ids", None))
+    negative("rejects an empty-string policy_rule_ids",
+             lambda d: d["findings"][0].__setitem__("policy_rule_ids", "  "))
 
     # 6. committed regression baselines under tests/baselines/. The canonical
     #    JSON is the source of truth; the committed HTML/TXT are derived. For the
@@ -378,7 +401,7 @@ def main():
             quoted = [("rule_text", rule["rule_id"], rule["rule_text"])
                       for rule in bdata["remit_coverage"]["rules"]]
             for f in bdata["findings"]:
-                for seg in f.get("policy_rule_text", "").split(" / "):
+                for seg in (f.get("policy_rule_text") or "").split(" / "):
                     if seg.strip():
                         quoted.append(("policy_rule_text", f["id"], seg.strip()))
             missing = [(kind, who, txt) for (kind, who, txt) in quoted if txt not in remit]
