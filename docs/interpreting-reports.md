@@ -7,6 +7,23 @@
 
 Praxen produces three output files per analysis: a **findings JSON** (the canonical, complete record — written by the skill), and — rendered deterministically from it by the bundled `render.py` — an **HTML report** (the primary deliverable for humans) and a **`.txt` summary** (stdout-style). The HTML and TXT are byte-identical for a given JSON; the JSON is the thing automation should consume.
 
+```mermaid
+flowchart LR
+  subgraph S1["Stage 1 — LLM (your coding agent)"]
+    direction TB
+    SK["SKILL.md<br/>12-step procedure"] --> CJ["findings.json<br/>(canonical record)"]
+  end
+  subgraph S2["Stage 2 — deterministic render (Python)"]
+    direction TB
+    SC["schema.py<br/>validator"] --> RN["render.py"]
+    RN --> HT["analysis.html"]
+    RN --> TX["analysis.txt"]
+  end
+  CJ --> SC
+```
+
+The split matters in practice: the synthesis is an LLM job (judgement, calibration, prose), the rendering is mechanical (deterministic, no LLM call, byte-identical re-render from the same JSON). The JSON is the *canonical record*; the HTML and TXT are derived views.
+
 This page walks through what each section of the HTML report means, how severities and confidence levels work, how the RAISE maturity score should be read, and what's in the JSON.
 
 ---
@@ -146,11 +163,7 @@ Use the JSON for:
 - **Diffing** — compare two analyses to detect regressions or improvements between releases (the prose fields diff cleanly too)
 - **Risk reports** — filter findings by `severity`, `raise_category`, or OWASP tag for compliance reporting
 
-The full schema, with field types and the validator's invariants, is documented in [`PRAXEN_SPEC.md`](../PRAXEN_SPEC.md) §6 (and codified in `skills/behavior-verifier/schema.py`).
-
-> **Schema change in v0.3 (this release).** v2.0: `evidence[]` is now an array of `{ file, line, snippet }` objects (was `[string]`); `recommended_actions[]` is an array (was a single `recommended_action` string); a new optional `description` field carries a longer-form body for downstream consumers (the report card currently shows `summary` only). Tooling reading evidence/actions needs updating. A published JSON-Schema document at `skills/behavior-verifier/findings.schema.json` (in the Praxen distribution) is the machine-readable contract.
->
-> **Schema change in v0.2.** The v1.0 object schema replaced the pre-0.2 bare-list-of-findings format (which had a trailing `-POSTURE` summary entry carrying the posture score). Both are legacy; the v0.3 renderer does not read either.
+The full schema, with field types and the validator's invariants, is documented in [`PRAXEN_SPEC.md`](../PRAXEN_SPEC.md) §6 (and codified in `skills/behavior-verifier/schema.py`). The published JSON-Schema document at `skills/behavior-verifier/findings.schema.json` is the machine-readable contract for downstream tooling. For the history of schema changes across releases, see [`CHANGELOG.md`](../CHANGELOG.md).
 
 ---
 

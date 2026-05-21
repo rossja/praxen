@@ -5,7 +5,7 @@
 
 # Praxen Documentation
 
-**Praxen** is an agent behavior verifier. It compares an AI agent's declared policy (a Worker Remit) against whatever evidence is available about that agent — source code, live deployment state, or behavioral artifacts — and reports where observed behavior diverges from declared intent.
+**Praxen** is the open-source reference implementation of **Agent Behavior Verification (ABV)** — a proactive control model for AI agents and digital workers. It compares an AI agent's declared policy (a Worker Remit) against whatever evidence is available about that agent — source code, live deployment state, behavioral artifacts, governance docs, or any mix — and reports where observed behavior diverges from declared intent.
 
 > *Make sure your agent does its job — and only its job.*
 
@@ -18,10 +18,12 @@
 | If you are… | Read this first |
 |---|---|
 | Setting up Praxen for the first time | [Installation](installation.md) |
-| Ready to run your first analysis | [Usage](usage.md) |
+| Trying it out for the first time | [Quickstart](quickstart.md) — first report against the bundled `finbot` example in five minutes |
+| Ready to run your first real analysis | [Usage](usage.md) |
 | Writing a Worker Remit for an agent | [Writing Worker Remits](writing-remits.md) |
 | Looking at a report and trying to understand it | [Interpreting Reports](interpreting-reports.md) |
 | Disagreeing with a finding or wanting to revise it | [Challenging and Revising Findings](challenging-findings.md) |
+| Hit a problem on a first run | [Usage § Troubleshooting](usage.md#troubleshooting) |
 | Trying to understand the OWASP frameworks Praxen tags against | [OWASP Gen AI Security](owasp.md) |
 | Trying to understand the RAISE maturity scoring | [The RAISE Framework](RAISE.md) |
 
@@ -35,17 +37,28 @@ Praxen reduces agent verification to a single comparison:
 2. **You point Praxen at evidence about the agent** — its source code, live deployment files, conversation logs, or any combination.
 3. **Praxen reads, compares, reports.** Every finding traces to a specific rule in the Worker Remit it violates, with evidence cited from the input.
 
+```mermaid
+flowchart LR
+  WR["Worker Remit<br/>(declared policy)"] --> P{{"behavior-verifier<br/>skill"}}
+  EV["Evidence<br/>(source · deployment · behavior · governance)"] --> P
+  P --> JSON["findings.json<br/>(canonical)"]
+  JSON --> R["render.py"]
+  R --> HTML["analysis.html"]
+  R --> TXT["analysis.txt"]
+```
+
 The output is a self-contained HTML analysis report, a machine-readable JSON findings file, and a plain-text summary. Open the HTML in a browser; ingest the JSON in your pipeline.
 
 ---
 
-## Three Input Shapes
+## Four Input Shapes
 
 Praxen is **not just a source-code analyzer.** Any of these — alone or in combination — are valid input:
 
 - **Source repository** — a project directory, GitHub repo, or plugin source tree.
 - **Running deployment** — live memory and bootstrap files (`MEMORY.md`, `SOUL.md`), operational logs (action reports, session JSONL, audit trails, escalation logs), live config.
 - **Behavioral artifacts** — chat transcripts, email histories, conversation logs, decision records.
+- **Governance & methodology docs** — red-team reports, threat models, runbooks, incident retrospectives, dependency-management policy. These feed the maturity-oriented RAISE categories (Build an AI Red Team, Monitor Continuously, Manage Your Supply Chain) that source code alone can't speak to.
 
 The methodology adapts. Categories the input doesn't cover are scored at lower confidence and explicitly noted in the report. See [Usage](usage.md) for how to point Praxen at each type.
 

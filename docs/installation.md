@@ -21,48 +21,15 @@ That's the entire dependency surface.
 
 ## Option A — Install via Claude Code plugin marketplace
 
-This is the recommended path for Claude Code users. There are two equivalent ways
-to run the marketplace commands — they manage the same plugin configuration.
-
-**From your terminal (recommended).** The `claude plugin` subcommand is
-non-interactive and accepts arguments directly, so it works the same regardless
-of how your Claude Code interface handles in-session slash commands:
+This is the recommended path for Claude Code users. From your terminal:
 
 ```bash
 claude plugin marketplace add open-ai-security/praxen
 claude plugin install praxen@open-ai-security
+claude plugin list      # confirm: praxen@open-ai-security, enabled, v0.7.0+
 ```
 
-**Or from within a Claude Code session.** Type each as a slash command at the
-prompt:
-
-```
-/plugin marketplace add open-ai-security/praxen
-/plugin install praxen@open-ai-security
-```
-
-> **If the slash commands don't execute** — i.e. they get sent as an ordinary
-> message instead of running — use the terminal form above instead. The
-> `claude plugin ...` commands are the most reliable path and do exactly the
-> same thing.
-
-The skill registers as `behavior-verifier`. After installing from within a
-session, run `/reload-plugins` (or restart Claude Code) to activate it.
-
-Confirm it's installed:
-
-```bash
-claude plugin list
-```
-
-You should see `praxen@open-ai-security` (with version `0.7.0` or later), `enabled`. The
-in-session equivalent is `/plugin list`.
-
-> **Note:** the GitHub repository is currently named `open-ai-security/praxen`. The
-> repository rename to match the project name is a separate administrative task.
-> Use the name above as-is — the marketplace itself registers as `exabeam`
-> (defined in the repo's `.claude-plugin/marketplace.json`), which is why the
-> install target is `praxen@open-ai-security`.
+The skill registers as `behavior-verifier`. The in-session equivalents — `/plugin marketplace add …`, `/plugin install …`, `/plugin list` — do exactly the same thing; if you install from within a Claude Code session, run `/reload-plugins` (or restart) to activate the skill. Prefer the terminal form when scripting: `claude plugin …` is argument-driven and runs the same way on every interface, whereas in-session slash commands occasionally fall through and get sent as ordinary chat messages.
 
 ---
 
@@ -82,60 +49,50 @@ Then point your coding agent at `skills/behavior-verifier/SKILL.md` when running
 
 ## Verifying the install
 
-Run an analysis against one of the bundled examples. The `examples/` directory contains pre-staged Worker Remits for FinBot and HelperBot — both deliberately vulnerable agents. From a Claude Code session:
+Run:
 
+```bash
+claude plugin list
 ```
-Please run the behavior-verifier skill against examples/finbot/. Use the Worker Remit at examples/finbot/WORKER_REMIT.md. Write outputs to a temporary reports directory.
-```
 
-A successful analysis produces three files in the reports directory:
+If `praxen@open-ai-security` appears at `v0.7.0` or later with `enabled`, the marketplace install is working. From within a Claude Code session, the same plugin shows up under `/plugin list`, and the skill is invocable as `behavior-verifier`.
 
-- `finbot-findings-<date>.json` — the canonical record (written by the skill)
-- `finbot-analysis-<timestamp>.html` — the report (rendered from the JSON by `render.py`)
-- `finbot-analysis-<timestamp>.txt` — a plain-text summary (also from `render.py`)
-
-If the renderer step printed `render.py: wrote .../finbot-analysis-...html` and exited cleanly, the JSON passed schema validation and the HTML is marker-free. Open the HTML in a browser: if it renders with the Praxen header, six RAISE category cards, and a Findings Register populated with cited evidence, the install is working.
+For an end-to-end first run that actually exercises the analysis pipeline — Worker Remit + agent source → HTML / JSON / TXT report — see [Quickstart](quickstart.md). It walks through scanning the bundled `finbot` example in about five minutes.
 
 ---
 
 ## Updating
 
-### Plugin marketplace install
+**Plugin marketplace install:**
 
 ```bash
-claude plugin marketplace update exabeam
+claude plugin marketplace update open-ai-security
 claude plugin update praxen@open-ai-security
 ```
 
-The in-session equivalents are `/plugin marketplace update exabeam` and
-`/plugin update praxen@open-ai-security`. A restart is required to apply the update.
+Restart Claude Code to apply. (In-session equivalents are the same commands as `/plugin …`.)
 
-### Unzipped release
-
-Download the new release zip and replace the unzipped directory. There is no migration step — Praxen is stateless across analyses.
+**Unzipped release:** download the new release zip and replace the unzipped directory. There is no migration step — Praxen is stateless across analyses.
 
 ---
 
 ## Uninstalling
 
-### Plugin marketplace install
+**Plugin marketplace install:**
 
 ```bash
 claude plugin uninstall praxen@open-ai-security
-claude plugin marketplace remove exabeam
+claude plugin marketplace remove open-ai-security
 ```
 
-The in-session equivalents are `/plugin uninstall praxen@open-ai-security` and
-`/plugin marketplace remove exabeam`. Note the marketplace is removed by its
-registered name, `exabeam` — not the `open-ai-security/praxen` repo path used to add it.
+The marketplace is removed by its registered name (`open-ai-security`, from `.claude-plugin/marketplace.json`) — which here matches the repo owner used to add it.
 
-### Unzipped release
-
-Delete the directory. No system state is left behind.
+**Unzipped release:** delete the directory. No system state is left behind.
 
 ---
 
 ## Next steps
 
-- [Usage](usage.md) — running your first analysis
+- [Quickstart](quickstart.md) — first end-to-end report against the bundled `finbot` example
 - [Writing Worker Remits](writing-remits.md) — authoring the policy document Praxen verifies against
+- [Usage](usage.md) — the full running-an-analysis reference

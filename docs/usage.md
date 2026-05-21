@@ -7,6 +7,8 @@
 
 Running a Praxen analysis takes two inputs: a **Worker Remit** (the agent's declared policy) and **evidence** (whatever the agent's code, deployment state, behavioral records, or development/governance docs can provide). Praxen produces three output files in `./reports/`.
 
+**Praxen is a read-only external observer.** It reads the artifacts you point it at and writes a local report; it does not modify the agent, sit in its control path, or call any service Praxen itself controls. That makes it suitable as an independent verifier — not self-attestation by the agent under analysis.
+
 This page covers the end-to-end run. For installing Praxen, see [Installation](installation.md). For authoring the Worker Remit, see [Writing Worker Remits](writing-remits.md).
 
 ---
@@ -26,7 +28,7 @@ Praxen accepts four input shapes — used individually or in combination:
 | Shape | What you point Praxen at |
 |---|---|
 | **Source repository** | A directory containing the agent's code, configs, skill files, dependencies, prompts. Most common for repo-based agents. |
-| **Running deployment** | A directory containing live memory files (`MEMORY.md`, `SOUL.md`), operational logs (action reports, session JSONL, audit trails, escalation logs), and live config files. Pulled from a deployed instance of the agent — for example, point Praxen at an OpenClaw worker's `Workspace/` folder, which holds the `SOUL.md` and the other code and prompt artifacts that make up the agent's skillset, alongside its accumulated memory and logs. |
+| **Running deployment** | A directory containing live memory files (`MEMORY.md`, `SOUL.md`), operational logs (action reports, session JSONL, audit trails, escalation logs), and live config files. Pulled from a deployed instance of the agent — typically an exported workspace directory that holds the agent's identity files, the code and prompt artifacts that make up its skillset, and its accumulated memory and logs. |
 | **Behavioral artifacts** | A chat transcript, email history, decision record, or any conversation log that captures how the agent has actually behaved. |
 | **Governance & methodology docs** | RAISE scores *maturity*, not just behavior — so development and operational practice documents count as evidence too. A red-team plan or its results, threat models, security review records, SDLC/runbook docs, incident retrospectives, dependency-management policy, monitoring/alerting design. These feed the maturity-oriented RAISE categories (**Build an AI Red Team**, **Monitor Continuously**, **Manage Your Supply Chain**) that source code alone can't speak to. |
 
@@ -123,6 +125,53 @@ A Praxen analysis is read-heavy: it loads the skill procedure, the knowledge bas
 A report produced *through* a mid-synthesis compaction should be treated as possibly incomplete until you've done one of those — not authoritative.
 
 This is guidance, not a guarantee — a genuinely large workspace can still compact even when scoped well. Scoping tighter and giving the run a fresh, large context window is the most reliable thing you can do today; the draft manifest is the safety net for when it compacts regardless.
+
+---
+
+## Troubleshooting
+
+A short list of first-run snags and how to clear them.
+
+### "behavior-verifier skill not found" / the agent doesn't recognise the skill
+
+The plugin is installed but the current session hasn't picked it up.
+
+- From within Claude Code: run `/reload-plugins`, or restart Claude Code.
+- From the terminal: `claude plugin list` should show `praxen@open-ai-security`, `enabled`. If it doesn't, re-run the install (`claude plugin install praxen@open-ai-security`); if it does and the in-session agent still can't find it, you're in a stale session — start a new one.
+- Using an unzipped release directly (no marketplace): point the agent at `skills/behavior-verifier/SKILL.md` explicitly rather than naming the skill.
+
+### `render.py` errored at the end of the run
+
+The LLM wrote a `findings.json` that didn't pass schema validation, so the deterministic render step refused to produce an HTML report. The error message names the offending JSON path (e.g. `$.findings[3].evidence: expected array, got string`).
+
+This is usually a context-pressure symptom — the analysis was synthesised under stress and the JSON came out malformed. Options:
+
+- **Re-run** in a larger context window or with a tighter input scope. See *Large workspaces and context sizing* above.
+- **Recover from the draft manifest** if Praxen wrote one (`./reports/<agent>-draft-<timestamp>.md` — Step 9.9 writes this before the JSON). Tell the agent: *"the canonical JSON failed validation — read the draft manifest and rebuild from it."*
+
+If the same JSON-shape error reproduces on a fresh run with plenty of context, that's a Praxen bug — please [file it](https://github.com/open-ai-security/praxen/issues/new/choose) with the schema error and the agent slug.
+
+### "Worker Remit not found" / "no remit at that path"
+
+The skill couldn't find the path you named. Most common causes:
+
+- **Relative paths are relative to where the coding agent is running**, not to your terminal. From a Claude Code session, you can check with a quick `pwd` before the analysis.
+- **A typo in the filename** — Praxen looks for the exact path you provide; it does not search.
+- **The agent's working directory isn't where you think it is** — re-`cd` and start fresh, or pass an absolute path.
+
+### Mid-analysis context auto-compaction (silent quality loss)
+
+Long scans on agents with a lot of evidence can exceed the coding agent's context window. Auto-compaction is *silent* — the run keeps going, but findings gathered early get summarised away before the report is written. Symptoms:
+
+- The interim overview Praxen prints to stdout names findings the final HTML doesn't include.
+- The HTML report looks suspiciously thin compared to the workspace's complexity.
+- The agent suddenly switches to ad-hoc Python to "fix up" the JSON near the end of the run.
+
+What to do is in *Large workspaces and context sizing* above — the short version is: re-run in a larger window with a tighter scope, or recover from the draft manifest. A report produced through a mid-synthesis compaction should be treated as possibly incomplete until you've done one of those.
+
+### Scores look lower than reality
+
+The most common operator surprise — *"my agent is more careful than this report suggests."* In nearly every case, the cause is that the evidence you handed Praxen didn't *show* a control that's actually in place (a review process, a deployment-time limit, an external guardrail, a monitoring pipeline, a red-team cadence). See *Results tuning* above for the additive-evidence workflow.
 
 ---
 
