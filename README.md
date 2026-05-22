@@ -15,11 +15,15 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 
-> *Make sure your agent does its job — and only its job.*
+*Make sure your agent does its job — and only its job.*
 
-> **📦 Install** with Claude Code: <code>/plugin marketplace add open-ai-security/praxen</code> then <code>/plugin install praxen@open-ai-security</code> &nbsp;·&nbsp; full guide in [<code>docs/installation.md</code>](docs/installation.md).
->
-> **👀 See a real report** before you install: view the [**live FinBot analysis report**](https://open-ai-security.github.io/praxen/examples/finbot/finbot-analysis.html), rendered on GitHub Pages.
+That's where the risk actually lives: most agentic security and safety failures come down to an agent **not doing its job** — malfunctioning, misaligned, or adversarially subverted.
+
+**Praxen** is named for **praxis** (Ancient Greek *πρᾶξις*), the act of turning theory into practice — which is exactly its job: verifying that an agent's *declared* intent (the theory) actually shows up in its *observed* behavior (the practice).
+
+**📦 Install** with Claude Code — `/plugin marketplace add open-ai-security/praxen` then `/plugin install praxen@open-ai-security`. Full guide: [docs/installation.md](docs/installation.md).
+
+**👀 See a real report** first — the [live FinBot analysis report](https://open-ai-security.github.io/praxen/examples/finbot/finbot-analysis.html), rendered on GitHub Pages.
 
 ---
 
@@ -27,7 +31,7 @@
 
 Praxen is the open-source reference implementation of **Agent Behavior Verification (ABV)** — a proactive control model for AI agents and digital workers. The premise is the same one identity and access management applies to human employees: every actor has an authorized role, and the controls have to actually enforce it.
 
-The number one risk area for agentic security and safety is simple to state: **the agent doesn't do its job.** A malfunctioning agent, a misaligned agent, an agent that's been adversarially subverted — from the outside they look the same, and what matters in every case is the *behavior*, measured as its deviation from intent.
+And a misbehaving agent is hard to catch: whatever the cause, it surfaces the same way — as wrong behavior. So the only reliable signal is the *behavior* itself, measured as its deviation from declared intent.
 
 That's why screening for prompt injections, or scanning code for known-bad patterns, isn't enough. Those are necessary but partial: they catch some inputs and some implementation flaws, not the question that actually matters — *is this agent going to do, or is it doing, the thing it was deployed to do, and nothing else?*
 
