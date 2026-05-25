@@ -15,11 +15,13 @@
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 
-*Make sure your agent does its job — and only its job.*
+> ### Make sure your agent does its job — and only its job.
 
 That's where the risk actually lives: most agentic security and safety failures come down to an agent **not doing its job** — malfunctioning, misaligned, or adversarially subverted.
 
 **Praxen** is named for **praxis** (Ancient Greek *πρᾶξις*), the act of turning theory into practice — which is exactly its job: verifying that an agent's *declared* intent (the theory) actually shows up in its *observed* behavior (the practice).
+
+---
 
 **📦 Install** with Claude Code — `/plugin marketplace add open-ai-security/praxen` then `/plugin install praxen@open-ai-security`. Full guide: [docs/installation.md](docs/installation.md).
 
@@ -46,7 +48,7 @@ Define the job. Test against the job. Everything else in Praxen serves those two
 
 ## How it works (30 seconds)
 
-- You write a **Worker Remit** — a markdown policy document declaring what the agent is allowed to do. ([authoring guide](docs/writing-remits.md))
+- You write a **Worker Remit** — a markdown policy document declaring what the agent is allowed to do — by hand, or have Praxen draft one from your description or docs. ([authoring guide](docs/writing-remits.md))
 - You point Praxen at **evidence** — source code, deployment state, behavioral logs, governance docs, or any mix. ([usage](docs/usage.md))
 - Praxen reports the **gap**. Every finding answers a single question: *does observed behavior match declared intent?* ([reading reports](docs/interpreting-reports.md))
 

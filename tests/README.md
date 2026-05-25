@@ -5,15 +5,32 @@
 
 # Praxen Pre-Release Test Plan
 
-Praxen's regression test suite. Before every release, run the full eleven-target suite below, then **diff every target against the latest frozen baseline in `baselines/`** and against the per-target bands in this document (see *[What a release review looks like](#what-a-release-review-looks-like)*). Ad-hoc / mid-development re-run reports are **not** kept here — they regenerate and drift; the only committed runs are the named, version-pinned baselines under `baselines/`.
+Praxen's regression test suite. Three named tiers — pick the one that matches what you're doing (see *[Test tiers](#test-tiers)* below). Before every `dev → main` release PR, run the **Full Suite Run** — all eleven targets, either via parallel subagent (4–8 concurrent, ~90 min end-to-end) or sequential foreground (~3–4 hours end-to-end) — then **diff every target against the latest frozen baseline in `baselines/`** and against the per-target bands in this document (see *[What a release review looks like](#what-a-release-review-looks-like)*). Ad-hoc mid-development re-run reports are **not** kept here — they regenerate and drift. The committed runs are: the named, version-pinned **frozen baselines** under [`baselines/`](baselines/) (the reference a release is graded against), and the named **pre-release Full Suite Runs** under [`runs/`](runs/) (the evidence a specific release-candidate cleared the bar).
 
 ## Directory contents
 
 - `README.md` — this file
 - `remits/` — the Worker Remits developed for each test agent. Reusable; do not change between analyses.
 - `baselines/` — frozen, committed runs. **The current set is [`baselines/v0.7.0-sequential/`](baselines/v0.7.0-sequential/BASELINE.md)** — all eleven targets on the Praxen v0.7.0 skill, scanned cold against the intent-level Worker Remits. It is the comparison point for the release review. (`baselines/v0.4-parallel/` keeps the historical Phase-2 parallel-path gate record; the earlier `v0.2-sequential/` / `v0.3-sequential/` / `v0.6.3-sequential/` sets were retired in successive re-baselines — see [issue #40](https://github.com/open-ai-security/praxen/issues/40) and the `[0.7.0]` changelog entry.) See [`baselines/README.md`](baselines/README.md).
+- `runs/` — committed **pre-release Full Suite Runs**, the evidence-of-validation for each release. Named by the release the run validated (e.g. [`runs/v0.7.3-prerelease/`](runs/v0.7.3-prerelease/SUITE_RUN.md)), each containing a `SUITE_RUN.md` verdict report (timing table, per-target sanity verdicts, patterns surfaced) plus every target's findings JSON / HTML / TXT. Diff future Full Suite Runs against the latest entry here **in addition to** the active baseline — run-to-run drift is more sensitive than run-to-baseline drift. See [`runs/README.md`](runs/README.md).
 - `fixtures/`, `render/` — the `render.py`/`schema.py` smoke harness (`python3 tests/render/test_render.py`): the canonical-JSON fixture (`finbot.canonical.json`), the committed **golden render output** (`finbot.golden.html` / `finbot.golden.txt` — byte-compared on every run; the test header comments say how to regenerate them when output changes intentionally), the entity-normalisation checks, the negative-case mutations, and a sweep over **every committed baseline under `baselines/`** — each schema-2.0 baseline JSON must validate against `schema.py`; each post-relicense one must re-render byte-for-byte from its JSON and (from `praxen_version` 0.6.0 on) quote its `tests/remits/<slug>.md` verbatim. So a renderer change that silently desyncs a committed report, or a baseline whose `rule_text` drifts from its remit, fails CI.
 - CI runs `tests/render/test_render.py` + `build.sh` on every push and PR across Python **3.9 / 3.12 / 3.13** (`.github/workflows/ci.yml`); pushing a `v*` tag runs the suite, builds the zip, and cuts a GitHub release (`.github/workflows/release.yml` — it also checks the tag matches `PRAXEN_SPEC.md`'s version).
+
+## Test tiers
+
+Three named tiers, escalating in scope and wallclock. Pick the one that matches what you're doing.
+
+### Smoke harness — `python3 tests/render/test_render.py` (~30 s, runs in CI)
+
+Renderer + schema validator + golden-byte checks. Sweeps every committed baseline JSON through `schema.py`, re-renders each post-relicense baseline byte-for-byte from its JSON, validates the canonical FinBot fixture's golden HTML/TXT outputs, and exercises entity normalisation + negative-case mutations. CI runs this on every push and PR across Python 3.9 / 3.12 / 3.13 (`.github/workflows/ci.yml`). A failure here means a renderer change silently desynced a committed report, or a baseline's `rule_text` drifted from its remit. **No Praxen analysis runs — this tier doesn't scan any agents.**
+
+### Single-target scan (~10 min)
+
+One Praxen analysis against one target, end-to-end. The fastest way to sanity-check a skill edit. **HelperBot** is the suite's most stable score and the fastest to scan; **FinBot** is the canonical "deliberately vulnerable" anchor. See [How to run a single-target scan](#how-to-run-a-single-target-scan) below for the procedure.
+
+### Full Suite Run (~90 min parallel subagent, ~3–4 hr sequential foreground)
+
+All eleven targets against the release candidate, with timing data captured and every target's findings preserved. **Mandatory before every `dev → main` release PR**; recommended before any substantial change to `SKILL.md`, `schema.py`, or the knowledge base. Produces a verdict report (timing table + per-target sanity-vs-baseline + patterns surfaced) committed as a named `runs/<release>-prerelease/` directory. See [Full Suite Run protocol](#full-suite-run-protocol) below for the two invocation paths (parallel subagent, sequential foreground).
 
 ## Calibration posture
 
@@ -31,7 +48,7 @@ Blind-run scoring carries inherent variance — the *same target* re-analyzed fr
 4. **Full compare against the baseline.** For every target, diff the new findings JSON against `baselines/<latest>-sequential/<target>/…-findings-*.json`: weighted RAISE within ±0.3–0.5 of the baseline *and* inside the per-target band below; severity counts in the same neighbourhood; **dominant pattern / themes still covered (no Critical theme dropped)** — this last one is the hard gate. (See *[What a release review looks like](#what-a-release-review-looks-like)* for the per-report checks.)
 5. Any regression — a material finding dropped, a critical theme missed, a weighted score well outside the band, a target that drifts far from the baseline with no Praxen change to explain it — blocks the release. An in-band shift, or a deliberate calibration/detection change that moves the numbers, is fine: note it in the release notes **and re-freeze a new `baselines/<next-version>-sequential/`** (and update the "Latest" pointer above + the affected bands below).
 
-## How to run an analysis
+## How to run a single-target scan
 
 For each target:
 
@@ -43,14 +60,47 @@ For each target:
 6. Instruct Claude Code to read `skills/behavior-verifier/SKILL.md` and analyze the workspace path.
 7. Review `<target>-analysis-<timestamp>.html` in `reports/`.
 
-### Running the full suite
+## Full Suite Run protocol
 
-The eleven scans are independent and can be run in parallel — e.g. as concurrent Claude Code subagent scans — but two practices keep that reliable:
+The Full Suite Run validates a release candidate against all eleven targets. **Typical wallclock: 8–15 min per scan**, ~2 hours of model time across the 11 scans. End-to-end: ~90 min via parallel subagent (4–8 concurrent), ~3–4 hours via sequential foreground.
 
-- **Cap concurrency at roughly 4–8 scans at once.** Each scan clones a target repo and runs a full analysis; launching all eleven together has overloaded the environment and tripped per-agent no-progress watchdogs.
-- **Write each run's outputs to a durable path, not `/tmp`.** A scan's `/tmp` working directory can be reaped mid-run; copy the four output files to a stable location (e.g. a gitignored `local/` directory) as the final step, so a stall *after* the analysis completes doesn't lose the work.
+### When to run
+
+- **Mandatory** before every `dev → main` release PR.
+- **Recommended** before any substantial change to `SKILL.md`, `schema.py`, or the knowledge base.
+- **Not needed** for renderer-only changes (the smoke harness covers those), documentation changes, or refactors that don't touch the analysis path.
+
+### How to invoke
+
+**Two paths, both supported.**
+
+- **Parallel subagent (canonical for full-suite throughput)** — launch each scan as a background general-purpose agent. The scans are independent and run concurrently, **capped at 4–8 at a time** (more has overloaded the environment and tripped no-progress watchdogs in past runs). Write each run's outputs to a **durable path, not `/tmp`** — a scan's `/tmp` working directory can be reaped mid-run; a gitignored `local/<run-name>/<target>-out/` is the canonical pattern. End-to-end ~90 min for the 11 scans on a quiet system.
+
+- **Sequential foreground** — open one Claude Code session per target and drive each scan to completion before moving to the next. Slowest in wallclock (~3–4 hr end-to-end) but the most observable; useful for debugging a single target, validating a SKILL change one scan at a time, or runs where you want to watch each scan live. No watchdog concerns.
 
 A single scan on its own — one target, one session — needs neither precaution.
+
+For each target in either path: working directory under a durable, gitignored path (`local/<run-name>/<target>-out/`, never `/tmp`); CWD = that directory; copy the remit from `tests/remits/<target>.md` to `WORKER_REMIT.md`; clone or extract the target source to a sibling path; instruct the session (or subagent) to read `skills/behavior-verifier/SKILL.md` and analyse the workspace. When the three canonical outputs (`*-findings-*.json`, `*-analysis-*.html`, `*-analysis-*.txt`) are present and `render.py` exited clean, the scan is done.
+
+### Subagent watchdog — addressed at root cause
+
+Subagent runs have a no-progress watchdog (~600 s) that historically killed scans when the worker silently composed long Step 10 findings prose. The SKILL changes that landed for 0.7.3 — Step 9.9's full-prose-manifest discipline and Step 10's mechanical-translation requirement — eliminate the burst at root cause. With pre-composed manifest prose, Step 10 Edits become pure mechanical transcription (~13 s/op per the anchor-test) rather than composition (~55 s/op with high variance that occasionally spiked past 600 s). If you observe stalls after this fix, that is a SKILL regression to investigate, not a subagent-infrastructure flake — the protocol's earlier "stream-health workaround" (skeleton-first + heartbeats + render-every-N) was a 0.7.2-era patch the SKILL itself now subsumes.
+
+### Verdict report (`SUITE_RUN.md`)
+
+Each Full Suite Run produces a `SUITE_RUN.md` in the run's output directory. The expected shape:
+
+- **Header**: STATUS line (PASS / FAIL / blocked-on-flag), one-line summary, the release this run validated.
+- **Inputs**: skill state under test, tolerance spec reference, source map (target → workspace path + scope).
+- **Per-target table**: `# | target | baseline (n · C/H/M/L/I · RAISE) | run (same) | duration | verdict`.
+- **Detailed notes per target**: duration, severity-count delta, RAISE delta, per-category RAISE breakdown, dominant Critical themes vs baseline, remit-coverage stat counts, any sanity flags.
+- **Suite verdict & timing summary** (closing block): per-scan timing table (range / median / mean), sanity table (Δ count, Δ RAISE, verdict per target), patterns surfaced (rule-count drift, calibration drift, stalls), bottom-line judgment.
+
+The committed copy from the v0.7.3 prerelease run — [`runs/v0.7.3-prerelease/SUITE_RUN.md`](runs/v0.7.3-prerelease/SUITE_RUN.md) — is the reference template.
+
+### After the run
+
+Commit the run as a named `tests/runs/<release>-prerelease/` directory: `SUITE_RUN.md` at the root, plus one `<target>-out/` subdirectory per target containing the three canonical outputs (`*-findings.json`, `*-analysis.html`, `*-analysis.txt`). See [`runs/README.md`](runs/README.md) for the layout convention.
 
 ## Test targets
 

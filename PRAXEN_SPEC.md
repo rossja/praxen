@@ -5,7 +5,7 @@
 
 # Praxen — Specification
 
-**Version:** 0.7.2
+**Version:** 0.7.3
 **Status:** Internal release
 **Tagline:** *Make sure your agent does its job — and only its job.*
 
@@ -207,6 +207,8 @@ Praxen evaluates the workspace against the six RAISE categories and applies name
 - **Credential exposure in unexpected locations** — secrets in documentation, config snapshots, action logs, archive artifacts, or example files. (Reported by location and pattern only — never by value.)
 - **Planned-but-not-deployed controls** — design docs, TODOs, or architectural notes that describe controls which don't yet exist in the running code.
 - **Configuration gap detection** — exec auto-approval, disabled tool-loop detection, missing rate limits, absent logging, overly broad permission scopes.
+- **Secondary-prompt discovery** — session-loaded identity files (`SOUL.md`, `AGENTS.md`, `MEMORY.md`, …) are discovered and audited as system prompts.
+- **Declared-but-never-consulted config / secret** — a config value or secret that is declared or loaded but never actually read by the running code (a half-wired control).
 - **MCP server evaluation** — when MCP configs are discovered, the OWASP Secure MCP Server minimum-bar checklist is applied.
 - **Remit-delta analysis** — tools, channels, data sources, or outbound destinations present in code but absent from the remit's authorized lists.
 - **Compound signal reasoning** — individual findings that are moderate in isolation but form a critical chain in combination (e.g., external content entering context + auto-approved exec = one-hop external-input-to-shell).
@@ -236,7 +238,7 @@ The remit is a policy document, not a system description. It declares intent —
 | Human approval requirements | Actions that require sign-off |
 | Escalation and scope boundaries | Where the agent must halt or decline |
 
-A template is included in `WORKER_REMIT_template.md`.
+A template, `WORKER_REMIT_template.md`, ships at the Praxen package root — write a remit from it by hand (the primary path), or have the skill help draft one.
 
 ### Specificity requirement
 
@@ -253,12 +255,12 @@ A remit with vague rules produces Low-confidence findings across the board. A re
 
 ## 6. Canonical Findings JSON
 
-Every analysis emits one JSON file — the **canonical, complete record** of the analysis. The HTML report and the `.txt` summary are rendered deterministically from it (§7); downstream consumers (ticketing, dashboards, compliance pipelines, run-to-run diffing) ingest the JSON directly. It is a single top-level object — *not* a list — and the bundled `schema.py` validator, which `render.py` runs before rendering, checks its shape, enumerations, and cross-field consistency; an analysis that produces a malformed JSON does not render.
+Every analysis emits one JSON file — the **canonical, complete record** of the analysis. The HTML report and the `.txt` summary are rendered deterministically from it (§7); downstream consumers (ticketing, dashboards, compliance pipelines, run-to-run diffing) ingest the JSON directly. It is a single top-level object — *not* a list — and the bundled `schema.py` validator, which `render.py` runs before rendering, checks its shape, enumerations, and cross-field consistency; an analysis that produces a malformed JSON does not render. The same contract is published as a machine-readable JSON Schema at `skills/behavior-verifier/findings.schema.json` for downstream tooling.
 
 ```json
 {
   "schema_version": "2.0",
-  "praxen_version": "0.7.2",
+  "praxen_version": "0.7.3",
   "scan": {
     "agent": "<agent name>",
     "agent_slug": "<agent-slug>",
@@ -371,17 +373,18 @@ Every finding carries both a RAISE category and, where applicable, OWASP LLM and
 
 Each analysis produces a self-contained HTML report from a canonical template (`skills/behavior-verifier/report_template.html`). The template is brand-compliant and not subject to per-analysis redesign. Praxen does **not** render the HTML with the LLM: the skill (Step 11) runs `render.py`, a bundled deterministic Python script (standard library only) that substitutes the canonical findings JSON (§6) into the template — same JSON in, byte-identical HTML out, every time. The renderer also writes the `.txt` summary. The template, the renderer (`render.py`), and the schema validator (`schema.py`) are version-locked and ship together.
 
-**Sections, in order** (the flow walks the reader from specifics to verdict):
+**Sections, in order** (the masthead gives the verdict at a glance; below it the flow walks from "what the agent is" to the maturity verdict):
 
-1. **Header** — navy bar with Exabeam-green accent, agent name, analysis timestamp, overall status badge (`CRITICAL` / `HIGH` / `ADVISORY` / `CLEAN` — the highest finding severity present, *not* the maturity score)
-2. **Intro band** — Agent Remit (as declared) and Agent Structure (as observed): two short prose summaries
-3. **Behavior Summary** — the dominant finding pattern, 2–4 sentences of synthesis
-4. **Remit Coverage** — every actionable remit rule with quoted text, status (Verified / Gap / Partial / Vague Policy / Enforcement Not Possible), and a link to the linked finding
-5. **Findings Register** — findings ordered Critical → High → Medium → Low → Informational; each card shows severity badge, ID, summary, RAISE/OWASP-LLM/OWASP-Agentic/MCP tags, quoted policy rule, evidence block, and recommended action
-6. **What's Working Well** — verified positive controls
-7. **Discovered Log Files** — log files found during the analysis, annotated with source / content type / purpose / modification time
-8. **RAISE Maturity Posture** — the wrap-up: a weighted-overall hero band with the maturity label, a 3×2 grid of the six category cards (score, confidence, weight, rationale), and the fixed 0–5 rubric table. Placed at the end on purpose, so the maturity score lands as a synthesis verdict rather than a headline that biases interpretation.
-9. **Footer** — brand, project sponsor, agent name, artifact count, finding counts, framework references, Praxen version
+1. **Masthead** — navy band with Exabeam-green accent, carrying the Praxen wordmark + tagline, the report identity (`<Agent> Analysis Report` and the completion date), and an at-a-glance metric cluster: finding counts by severity and the RAISE maturity score
+2. **Agent Remit (as declared)** — a short prose summary of the agent's declared intent, the baseline everything below is measured against
+3. **Behavior Summary (as observed)** — the dominant finding pattern, 2–4 sentences of synthesis
+4. **Scope of Analysis** — a short prose summary of what was actually examined (source code, deployment state, or behavioral transcript — named explicitly)
+5. **Remit Coverage** — every actionable remit rule with quoted text, status (Verified / Gap / Partial / Vague Policy / Enforcement Not Possible), and a link to the linked finding
+6. **Findings Register** — findings ordered Critical → High → Medium → Low → Informational; each card shows severity badge, ID, summary, RAISE/OWASP-LLM/OWASP-Agentic/MCP tags (each a link to that entry in the framework docs), quoted policy rule, evidence block, and recommended action
+7. **What's Working Well** — verified positive controls
+8. **Discovered Log Files** — log files found during the analysis, annotated with source / content type / purpose / modification time
+9. **RAISE Maturity Posture** — the wrap-up: a weighted-overall hero band with the maturity label, a 3×2 grid of the six category cards (score, confidence, weight, rationale), and the fixed 0–5 rubric table. Placed at the end on purpose, so the maturity score lands as a synthesis verdict rather than a headline that biases interpretation.
+10. **Footer** — brand, project sponsor, agent name, artifact count, finding counts, framework references, Praxen version
 
 The page renders correctly as `file://` — all CSS is inline, no external scripts, no external fonts beyond the declared Arial/Lausanne stack.
 
@@ -464,7 +467,7 @@ Praxen is operating well when:
 
 1. An analysis against an intentionally misconfigured test agent produces at least one Critical or High finding with specific file:line evidence and a recommended action.
 2. `render.py` exits 0 (which guarantees the findings JSON validated against `schema.py` and the HTML/TXT contain no unresolved markers), and the HTML report renders correctly in a browser opened directly from `./reports/`.
-3. The findings JSON is the v1.0 canonical object and is suitable for direct ingestion into downstream systems (no HTML parsing needed for the summary, posture score, or counts).
+3. The findings JSON is the v2.0 canonical object and is suitable for direct ingestion into downstream systems (no HTML parsing needed for the summary, posture score, or counts).
 4. Every actionable remit rule appears in the Remit Coverage section with a status (Verified / Gap / Partial / Vague Policy / Enforcement Not Possible).
 
 See `examples/` for two reference scans against deliberately vulnerable agents (FinBot from the OWASP Agentic AI CTF and HelperBot from the DVAA platform).
