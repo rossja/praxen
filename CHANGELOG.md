@@ -9,6 +9,34 @@ All notable changes to Praxen will be recorded here. Format roughly follows [Kee
 
 ---
 
+## [0.7.7] — 2026-05-29
+
+**SKILL polish + a fresh baseline set.** Two non-breaking SKILL improvements (multi-component remit guidance + source-inferred log files), an additive schema change, and a cold full-suite re-scan against all eleven targets to verify the SKILL deltas land non-breakingly. Findings engine remains the same shape: `manifest_to_findings.py` and the four knowledge bases are byte-identical to `0.7.6`; the new behavior is calibration-only.
+
+### Added
+- **Pre-flight Step 5 — flag under-documented capabilities rather than assuming restrictions.** When source documentation names a capability without scoping it (*"supports SSH tunnel mode"*, *"executes shell commands"*), the remit-authoring path now writes the best inference tagged `[Inferred]` and surfaces it as an open question at delivery — rather than writing a MUST NOT clause based on assumed scope, which previously produced Critical findings that were remit documentation errors rather than code vulnerabilities. (PR #42)
+- **Pre-flight multi-component-deployment guidance.** New paragraph on when to combine vs split remits for cooperating components, plus the structural rule for combined remits (scope note in Mission designating the primary RAISE subject, sub-headings within existing sections, no invented top-level sections). The Worker Remit template's Mission placeholder surfaces the same guidance at point of use. (PR #42)
+- **Step 4 source-inferred log file rows.** When no log files are found on disk but logging infrastructure is present in source (Python `RotatingFileHandler` / `FileHandler`, Node.js `winston` / `pino` file transports, Go `log.SetOutput` / `zap` file sinks, or language-equivalent log-routing configuration), the scanner now infers the runtime log file locations and records each with `mtime: "unknown"` and `status: "inferred"`. These rows give the operator an accurate picture of where runtime logs will appear on a deployed instance and support Monitor Continuously scoring on source-only scans. (PR #43)
+- **Step 9.8 — do not file findings for inferred log files.** The `inferred` rows in the log-files table communicate the situation; a "no logging" finding is warranted only when there is no logging infrastructure at all. (PR #43)
+- **`docs/usage.md` "For highest scan fidelity: run in a fresh context"** — operational guidance on the cold-context subagent pattern for high-confidence scans. (PR #43)
+- **`docs/writing-remits.md` sync** — surfaces the `[Inferred]` review checkpoint and a new "Writing restrictions for under-documented capabilities" entry under Common mistakes. (PR #42)
+
+### Changed
+- **`findings.schema.json` and `schema.py`** — `log_files` row `status` enum is now `["active", "inferred"]`. `inferred` is new (PR #43); `new` is removed as a vestige — it had appeared exactly once across all committed baselines (v0.7.4 aider's `.aider.llm.history`) and that one use was a misclassification of what should have been `inferred` (the path was derived from source code, not observed on disk; `inferred` didn't exist as a value yet). The scanner is read-only and has no scan-start-time comparison logic, so "freshly created this run" was never a semantically distinguishable case from `active`. The 6 rows in 4 historical JSONs that carried `"status": "new"` (1 in the v0.7.4 baseline, 5 across the `tests/runs/v0.7.3-prerelease*` snapshots) have been reclassified to `"inferred"`. `schema_version` stays at `"2.0"` — this is cleanup of a vestige rather than a semantic schema change.
+- **`render.py` and `report_template.html`** — added `log-status-inferred` CSS class (muted color) and label; added the **Logs** jump-nav button and an `id="logs"` anchor on the Discovered Log Files section.
+- **`tests/baselines/v0.7.7-sequential/`** — fresh full-suite re-scan against all eleven targets, replaces the previous `v0.7.4-sequential/` set as the canonical baseline. Cold runs against current upstream sources. Per-target delta narrative in `tests/baselines/v0.7.7-sequential/BASELINE.md`.
+- **`tests/baselines/owasp-coverage-report.html`** — regenerated against the new baseline set.
+- **`tests/baselines/v0.7.4-sequential/` retired**, kept on disk for diff archaeology. README pointers updated.
+
+### Unchanged on purpose
+- **Findings engine.** `manifest_to_findings.py` and the four knowledge bases (`KB_RAISE_SCANNING.md`, `KB_LLM_TOP10.md`, `KB_AGENTIC_TOP10.md`, `KB_MCP_SECURITY.md`) are byte-identical to `0.7.6`.
+- **Schema major.** `schema_version` stays at `"2.0"`. The `log_files` row `status` enum cleanup removes a vestigial value that was never semantically distinct from `active` — practical impact on downstream consumers is nil.
+- **Render layer.** `render.py`'s `_LOG_STATUS_CLASS["new"]` / `_LOG_STATUS_LABEL["new"]` dict entries and `report_template.html`'s `.log-status-new` CSS rule are deliberately kept as dead code — removing them would break byte-identity with every historical committed HTML that embeds them in its `<style>` block.
+- **Plugin install identifier.** Still `praxen@open-agent-ai-security`; no marketplace `name` change.
+
+### Calibration notes
+- **Monitor Continuously.** Source-only scans that previously reported "no log files found" will now report `inferred` rows when logging infrastructure is present in source. Monitor Continuously can legitimately land 1 or 2 (instead of 0) on targets where the logging is real but the on-disk files don't exist at scan time. A target's MC delta-vs-`v0.7.4-baseline` is influenced by this calibration shift; see `tests/baselines/v0.7.7-sequential/BASELINE.md` for the per-target read.
+
 ## [0.7.6] — 2026-05-28
 
 **OWASP LLM and Agentic Top 10 coverage visualizations.** Every Praxen report now carries two full-bleed 5×2 coverage grid sections — one per framework — showing the top-three most-severe findings per category as anchored chips, with empty cells rendered as "No findings" so the grid reads as a coverage *map* rather than a hit list. A new cross-baseline aggregate report tool ships under `tests/baselines/` for reviewing the suite's coverage across all eleven targets. **No findings-engine change** — `SKILL.md`, `schema.py`, `manifest_to_findings.py`, the knowledge bases, and every committed findings JSON are byte-identical to `0.7.5`; the grids are a new view over data that has been in the canonical JSON since schema 2.0. No migration required.
@@ -35,6 +63,8 @@ All notable changes to Praxen will be recorded here. Format roughly follows [Kee
 - Two cross-platform robustness fixes on `owasp_coverage.py` (UTF-8 encoding on read and write, POSIX path normalization for HTML `href`s) ensure the tool runs identically on Windows; the file is otherwise pure Python 3.9+ stdlib.
 
 ---
+
+
 
 ## [0.7.5] — 2026-05-27
 

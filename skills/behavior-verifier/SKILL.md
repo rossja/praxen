@@ -103,6 +103,9 @@ If the operator's request is to **create, write, draft, build, or author a Worke
 2. **Gather what the operator pointed you at** — typically a GitHub repo, a documentation directory, or a prose description of intended behavior. Use only the source they named; do not pull in code or evidence they did not ask for (unless the request is for an authoring pass that *includes* a code read, in which case say so explicitly before reading).
 3. **Fill each template section** with what the source says. When a section can be inferred but not directly quoted, write the inference in your prose and tag it `[Inferred]` so the operator can confirm. When a section is genuinely silent in the source — and authoring a remit requires *some* answer for it (forbidden actions, approval requirements, escalation rules) — ask the operator one targeted question rather than guessing.
 4. **Deliver the remit** at the operator's preferred path (default: `WORKER_REMIT.md` in the current directory, or `WORKER_REMIT_<AGENT>.md` for multi-agent workspaces).
+5. **Flag under-documented capabilities rather than assuming restrictions.** If documentation names a capability without scoping it — *"supports SSH tunnel mode"*, *"executes shell commands"* — write your best inference of the scope, tag it `[Inferred]`, and flag it as an open question when you deliver the remit.
+
+**Multi-component deployments.** When covering more than one cooperating component in a single remit, use separate remits if the components can be independently deployed and audited; combine only when they are tightly coupled and only make sense together. If combining, the template structure must be preserved exactly — Phase 1 inventory looks for the standard section headings (and adapts to whatever sections the remit uses), so rules placed in invented top-level sections risk being skipped. Use a scope note in the Mission section to name each component and designate which is the primary RAISE subject, and sub-headings within existing sections (`### Component A` / `### Component B`, or `#### Component A` / `#### Component B` for sections that already contain H3 sub-headings) to separate per-component rules.
 
 A request that is only authoring — **do not enter Step 1 or run an analysis afterward unless the operator asks.** A request that is "author the remit *and then* scan" — finish the remit, get operator confirmation that it reflects intent, then proceed to Step 1 with the new remit as the policy baseline.
 
@@ -249,6 +252,8 @@ Sweep the workspace for files that appear to be logs. Identify them by:
 - Content structure: repeated timestamped entries, JSON lines format, append-only patterns
 
 For each discovered log file, record: full path, apparent source, content type, apparent purpose, and last modified timestamp. You will serialize this list in Step 9.8.
+
+**Source-only scan — inferring log files from code.** If no log files are found on disk but logging infrastructure is present in source (e.g. Python's `setup_logging()` / `RotatingFileHandler` / `FileHandler`, Node.js `winston` / `pino` file transports, Go `log.SetOutput` or `zap` file sinks, or language-equivalent log-routing configuration), infer the runtime log file locations from the code. Record each inferred log file with `mtime: "unknown"` and `status: "inferred"`. These entries give the operator an accurate picture of where runtime logs will appear on a deployed instance and directly support Monitor Continuously scoring — omitting them because the scan is source-only leaves the report silent on a topic the code clearly addresses.
 
 **Before continuing to Step 4b: if any MCP server configuration was found in this step**, return to Step 3 and read `knowledge/KB_MCP_SECURITY.md` now. You need that calibration before Step 6's MCP Server Evaluation runs.
 
@@ -585,7 +590,9 @@ For each confirmed positive from Step 8: a `title` (short), a `description` (one
 
 ### 9.8 Discovered log files → `log_files`
 
-If you found log files in Step 4: set `present` to true and, for each, record `path`, `source` (the component that writes it), `content_type` (e.g., "structured JSON lines", "plaintext", "agent decision log"), `purpose` (what it captures), `mtime` (last-modified as you observed it — a date or `"unknown"`), and `status` (`active` if recently written, `new` if it looks freshly created this run). If you found none: set `present` to false, leave `rows` empty, and write a one-sentence `no_logs_note` — and if the absence of logging is itself a finding (it usually is for Monitor Continuously), say so and cite the finding ID.
+If you found log files in Step 4 (physically present or inferred from source): set `present` to true and, for each, record `path`, `source` (the component that writes it), `content_type` (e.g., "structured JSON lines", "plaintext", "agent decision log"), `purpose` (what it captures), `mtime` (last-modified as you observed it — a date or `"unknown"`), and `status` (`active` if observed on disk with a real mtime, `inferred` if the path was derived from source code rather than observed on disk). If you found neither physical log files nor logging infrastructure in source: set `present` to false, leave `rows` empty, and write a one-sentence `no_logs_note` — and if the absence of logging is itself a finding (it usually is for Monitor Continuously), say so and cite the finding ID.
+
+**Do not create a finding for inferred log files.** The `inferred` rows in the log files table already communicate the situation. A finding about logging absence is warranted only when there is no logging infrastructure at all — not when the infrastructure is present in source but the runtime files haven't been created yet.
 
 ### 9.9 Write the draft manifest, then print the interim overview — gate before Step 10
 
@@ -705,7 +712,7 @@ For each log file (empty exactly when `present=false` — in that case write a s
   content_type: <type>
   purpose: <what it captures>
   mtime: <date or "unknown">
-  status: <active | new>
+  status: <active | inferred>
 
 (The `## footer` and `### remit_coverage > ### stat_counts` sections are not authored — the Step 10 script computes them from the rules and findings you wrote above. Do not include them in the manifest.)
 ```
